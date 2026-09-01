@@ -20,8 +20,15 @@ export type LectureStatus = 'upcoming' | 'live' | 'done' | 'cancelled'
 export interface LectureView {
   id: string
   series_id: string
-  sheikh_id: string
+  /**
+   * مرجع قالب الشيخ — **قد يكون `null`** بعد هجرة ٠٠٢.
+   * حذف الشيخ من قائمة القوالب يُفرّغه ولا يمسّ الاسم ولا الرابط،
+   * فهما لقطة محفوظة داخل السلسلة نفسها. لا تعتمد عليه في العرض.
+   */
+  sheikh_id: string | null
+  /** لقطة الاسم وقت إنشاء السلسلة — لا تتغيّر بتعديل القالب */
   sheikh_name: string
+  /** لقطة الرابط — عليه تقوم صفحة `/sheikh/[slug]` والتصفية */
   sheikh_slug: string
   title: string
   /** الكتاب — نصّ حرّ اختياري، لا كيان (ADR-0001) */
@@ -54,7 +61,13 @@ export interface Series {
   id: string
   title: string
   book: string | null
-  sheikh_id: string
+  /** مرجع القالب — `null` إن حُذف الشيخ من القائمة */
+  sheikh_id: string | null
+  /** لقطة الاسم والرابط — النموذج القالبي (هجرة ٠٠٢) */
+  sheikh_name: string
+  sheikh_slug: string
+  /** غير `null` ⇐ مؤرشفة: تختفي عن الزائر وتبقى في اللوحة */
+  archived_at: string | null
   type: LectureType
   place: string | null
   map_url: string | null
@@ -67,6 +80,12 @@ export interface Settings {
   hq_place: string
   hq_map_url: string | null
   logo_url: string | null
+}
+
+/** خيار في قائمة تصفية المشايخ — من لقطات اللقاءات لا من جدول القوالب */
+export interface SheikhOption {
+  slug: string
+  name: string
 }
 
 /** أي الحقبتين يعرض الزائر — تصفية «قادم/سابق» */

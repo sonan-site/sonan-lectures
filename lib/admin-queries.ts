@@ -23,8 +23,13 @@ import {
  * مكتوبٌ في اللقاء وأيّه موروثٌ من سلسلته — فتُظهر الموروث نصّاً إرشادياً
  * وتَسِم الخارج عن سلسلته.
  *
- * أما **الحالة** فمن `v_lectures` وحدها (القاعدة ٦.١): لا تُحسب هنا ولو
- * كانت البيانات كلها حاضرة.
+ * أما **الحالة** فمن العرض وحده (القاعدة ٦.١): لا تُحسب هنا ولو كانت
+ * البيانات كلها حاضرة.
+ *
+ * ⚠️ والعرض المقروء هو `v_lectures_admin` لا `v_lectures`: العام صار يُخفي
+ * المؤرشف بعد هجرة ٠٠٢، فلو قُرئ هنا لغابت حالات اللقاءات المؤرشفة وسقطت
+ * افتراضاً إلى «قادم» — فيرى المشرف ماضياً على أنه قادم. والإداري يعرض كل
+ * شيء بلا ترشيح، ويحمل معه ختمَي الأرشفة.
  */
 
 function wrap(what: string, error: unknown): never {
@@ -46,6 +51,7 @@ interface RawLectureRow {
   map_url: string | null
   join_url: string | null
   is_cancelled: boolean
+  archived_at: string | null
   series: RawSeries
 }
 
@@ -59,7 +65,12 @@ interface RawSeries {
   map_url: string | null
   join_url: string | null
   duration_min: number
-  sheikh_id: string
+  /** `null` إن حُذف الشيخ من قائمة القوالب — لا يُعتمد عليه في العرض */
+  sheikh_id: string | null
+  /** اللقطة: هي مصدر الاسم المعروض، لا جدول المشايخ */
+  sheikh_name: string
+  sheikh_slug: string
+  archived_at: string | null
 }
 
 /** صفّ اللقاء كما تعرضه اللوحة — نصوص جاهزة وقيم خام معاً */
@@ -100,6 +111,10 @@ export interface AdminLectureVM {
   inhJoinUrl: string | null
 
   isCancelled: boolean
+  /** مؤرشف — مخفيّ عن الزائر، ظاهر هنا */
+  isArchived: boolean
+  /** سلسلته مؤرشفة — فهو مخفيّ عن الزائر تبعاً لها */
+  seriesArchived: boolean
   /** خرج عن سلسلته في حقل واحد على الأقل ⇐ وسم «مختلف عن السلسلة» */
   isOverridden: boolean
 
@@ -120,6 +135,9 @@ export interface AdminSeriesVM {
   typeClass: string
   count: number
   countAr: string
+  isArchived: boolean
+  /** حُذف قالب شيخها من القائمة — واللقطة باقية */
+  sheikhTemplateGone: boolean
 }
 
 /** صفّ الشيخ في تبويب المشايخ — بعدد سلاسله */
@@ -149,11 +167,13 @@ export async function getAdminData(): Promise<AdminData> {
     supabasePublic
       .from('lectures')
       .select(
-        'id, series_id, ord, starts_at, duration_min, type, place, map_url, join_url, is_cancelled,' +
-          ' series:series_id (id, title, book, slug, type, place, map_url, join_url, duration_min, sheikh_id)'
+        'id, series_id, ord, starts_at, duration_min, type, place, map_url, join_url,' +
+          ' is_cancelled, archived_at,' +
+          ' series:series_id (id, title, book, slug, type, place, map_url, join_url,' +
+          ' duration_min, sheikh_id, sheikh_name, sheikh_slug, archived_at)'
       )
       .order('starts_at', { ascending: true }),
-    supabasePublic.from('v_lectures').select('id, status'),
+    supabasePublic.from('v_lectures_admin').select('id, status'),
     supabasePublic.from('sheikhs').select('id, name, slug, is_active').order('name'),
     supabasePublic.from('settings').select('hq_place, hq_map_url, logo_url').single(),
   ])
@@ -169,10 +189,6 @@ export async function getAdminData(): Promise<AdminData> {
 
   const statusById = new Map<string, LectureStatus>(
     (statusRes.data ?? []).map((r) => [r.id as string, r.status as LectureStatus])
-  )
-
-  const sheikhNameById = new Map<string, string>(
-    (sheikhRes.data ?? []).map((s) => [s.id as string, s.name as string])
   )
 
   const rawRows = (rawRes.data ?? []) as unknown as RawLectureRow[]
@@ -199,7 +215,8 @@ export async function getAdminData(): Promise<AdminData> {
       seriesId: s.id,
       seriesTitle: s.title,
       seriesBook: s.book,
-      sheikhName: sheikhNameById.get(s.sheikh_id) ?? '—',
+      // من اللقطة لا من جدول القوالب — يبقى صحيحاً بعد حذف الشيخ منه
+      sheikhName: s.sheikh_name,
       ordAr: arNum(row.ord),
 
       hijri: hijriDate(starts),
@@ -226,6 +243,8 @@ export async function getAdminData(): Promise<AdminData> {
       inhJoinUrl: s.join_url,
 
       isCancelled: row.is_cancelled,
+      isArchived: row.archived_at !== null,
+      seriesArchived: s.archived_at !== null,
       isOverridden: Boolean(ovDuration || ovType || ovPlace || ovJoinUrl),
 
       status: statusById.get(row.id) ?? 'upcoming',
@@ -237,28 +256,38 @@ export async function getAdminData(): Promise<AdminData> {
   // سلسلة بلا لقاءات لا تظهر في الجدول أعلاه، فتُجلب القائمة كاملة على حدة
   const { data: allSeries, error: seriesErr } = await supabasePublic
     .from('series')
-    .select('id, title, book, slug, type, place, map_url, join_url, duration_min, sheikh_id')
+    .select(
+      'id, title, book, slug, type, place, map_url, join_url, duration_min,' +
+        ' sheikh_id, sheikh_name, sheikh_slug, archived_at'
+    )
     .order('title')
 
   if (seriesErr) wrap('السلاسل', seriesErr)
 
-  const series: AdminSeriesVM[] = (allSeries ?? []).map((s) => ({
-    id: s.id as string,
-    title: s.title as string,
-    book: (s.book as string | null) ?? null,
-    slug: s.slug as string,
-    sheikhName: sheikhNameById.get(s.sheikh_id as string) ?? '—',
-    type: s.type as LectureType,
-    typeLabel: TYPE_LABEL[s.type as LectureType],
-    typeClass: TYPE_CLASS[s.type as LectureType],
-    count: counts.get(s.id as string) ?? 0,
-    countAr: arNum(counts.get(s.id as string) ?? 0),
+  const seriesRows = (allSeries ?? []) as unknown as RawSeries[]
+
+  const series: AdminSeriesVM[] = seriesRows.map((s) => ({
+    id: s.id,
+    title: s.title,
+    book: s.book,
+    slug: s.slug,
+    sheikhName: s.sheikh_name,
+    type: s.type,
+    typeLabel: TYPE_LABEL[s.type],
+    typeClass: TYPE_CLASS[s.type],
+    count: counts.get(s.id) ?? 0,
+    countAr: arNum(counts.get(s.id) ?? 0),
+    isArchived: s.archived_at !== null,
+    sheikhTemplateGone: s.sheikh_id === null,
   }))
 
   // عدد سلاسل كل شيخ — من قائمة السلاسل الكاملة لا من اللقاءات
+  // يُعدّ بالمرجع لا باللقطة: العدد يجيب «كم سلسلة ما زالت مرتبطة بهذا القالب»
+  // وهو ما يُذكر في تأكيد الحذف. والسلسلة التي فُرّغ مرجعها لا تُنسب إلى أحد.
   const seriesPerSheikh = new Map<string, number>()
-  for (const s of allSeries ?? []) {
-    const sid = s.sheikh_id as string
+  for (const s of seriesRows) {
+    const sid = s.sheikh_id
+    if (!sid) continue
     seriesPerSheikh.set(sid, (seriesPerSheikh.get(sid) ?? 0) + 1)
   }
 

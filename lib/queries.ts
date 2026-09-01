@@ -5,7 +5,7 @@ import {
   type LectureView,
   type Series,
   type Settings,
-  type Sheikh,
+  type SheikhOption,
 } from './types'
 
 /**
@@ -45,28 +45,60 @@ export async function getSettings(): Promise<Settings> {
 // ============================================================
 
 /**
- * @param activeOnly الشيخ غير النشط يخرج من تصفية الزائر ومن اختيار السلسلة،
- *                   وتبقى لقاءاته ظاهرة في «السابقة» (القاعدة ٦.٦).
+ * هوية صفحة الشيخ — **من لقطة السلسلة لا من جدول القوالب**.
+ *
+ * هذا هو مربط النموذج القالبي: صفحة الشيخ ورابطه العام يبقيان عاملين بعد
+ * حذفه من قائمة القوالب، ما دامت له سلسلة حيّة. الاسم المعروض هو الاسم
+ * الذي أُدخِل وقت إنشاء السلسلة، فتعديل القالب لاحقاً لا يسري رجعياً.
+ *
+ * ويعيد `null` — أي ٤٠٤ — إن لم توجد له سلسلة حيّة أصلاً، فلا يُنشَر رابط
+ * لصفحة فارغة (معيار القبول ١٠).
  */
-export async function getSheikhs(activeOnly = true): Promise<Sheikh[]> {
-  let q = supabasePublic.from('sheikhs').select('id, name, slug, is_active')
-  if (activeOnly) q = q.eq('is_active', true)
-
-  const { data, error } = await q.order('name')
-  if (error) wrap('قائمة المشايخ', error)
-  return (data ?? []) as Sheikh[]
-}
-
-/** يعيد `null` إن لم يوجد — فتعرض الصفحة ٤٠٤ عربية (القسم ٧) */
-export async function getSheikhBySlug(slug: string): Promise<Sheikh | null> {
+export async function getSheikhPage(slug: string): Promise<SheikhOption | null> {
   const { data, error } = await supabasePublic
-    .from('sheikhs')
-    .select('id, name, slug, is_active')
-    .eq('slug', slug)
-    .maybeSingle()
+    .from('series')
+    .select('sheikh_name, sheikh_slug')
+    .eq('sheikh_slug', slug)
+    .is('archived_at', null)
+    .limit(1)
 
   if (error) wrap('بيانات الشيخ', error)
-  return (data as Sheikh) ?? null
+  const row = (data ?? [])[0]
+  return row ? { slug: row.sheikh_slug as string, name: row.sheikh_name as string } : null
+}
+
+/**
+ * قائمة تصفية المشايخ — من المشايخ الذين لهم لقاءات ظاهرة فعلاً.
+ *
+ * لا تُبنى من جدول `sheikhs` بعد اليوم: ذاك جدول **قوالب**، وقد يحوي مَن لا
+ * لقاء له، وقد يخلو ممّن حُذف قالبه ولقاءاته باقية. فتُشتقّ من `v_lectures`
+ * حيث اللقطة محفوظة — وهو المصدر نفسه الذي يُصفّى عليه، فلا يظهر في القائمة
+ * خيار يعطي جدولاً فارغاً ولا يغيب خيار له لقاءات.
+ *
+ * والقاعدة ٦.٦ محفوظة: القالب الموسوم `is_active = false` يبقى إخفاءً،
+ * فيُستبعَد صاحبه من التصفية وتبقى لقاءاته ظاهرة في «السابقة».
+ */
+export async function getSheikhOptions(): Promise<SheikhOption[]> {
+  const [rowsRes, hiddenRes] = await Promise.all([
+    supabasePublic.from('v_lectures').select('sheikh_slug, sheikh_name'),
+    supabasePublic.from('sheikhs').select('slug').eq('is_active', false),
+  ])
+
+  if (rowsRes.error) wrap('قائمة المشايخ', rowsRes.error)
+  if (hiddenRes.error) wrap('قائمة المشايخ', hiddenRes.error)
+
+  const hidden = new Set((hiddenRes.data ?? []).map((r) => r.slug as string))
+
+  const byslug = new Map<string, string>()
+  for (const r of rowsRes.data ?? []) {
+    const slug = r.sheikh_slug as string
+    if (hidden.has(slug)) continue
+    if (!byslug.has(slug)) byslug.set(slug, r.sheikh_name as string)
+  }
+
+  return [...byslug.entries()]
+    .map(([slug, name]) => ({ slug, name }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'ar'))
 }
 
 // ============================================================
@@ -76,12 +108,17 @@ export async function getSheikhBySlug(slug: string): Promise<Sheikh | null> {
 export async function getSeriesBySlug(slug: string): Promise<Series | null> {
   const { data, error } = await supabasePublic
     .from('series')
-    .select('id, title, book, sheikh_id, type, place, map_url, join_url, duration_min, slug')
+    .select(
+      'id, title, book, sheikh_id, sheikh_name, sheikh_slug, archived_at,' +
+        ' type, place, map_url, join_url, duration_min, slug'
+    )
     .eq('slug', slug)
+    // السلسلة المؤرشفة تختفي عن الزائر كما تختفي لقاءاتها من العرض
+    .is('archived_at', null)
     .maybeSingle()
 
   if (error) wrap('بيانات السلسلة', error)
-  return (data as Series) ?? null
+  return (data as unknown as Series) ?? null
 }
 
 /**

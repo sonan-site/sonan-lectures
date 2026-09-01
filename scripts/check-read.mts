@@ -16,8 +16,8 @@ process.loadEnvFile('.env.local')
 
 const {
   getSettings,
-  getSheikhs,
-  getSheikhBySlug,
+  getSheikhOptions,
+  getSheikhPage,
   getSeriesBySlug,
   getSeriesSlugMap,
   getLectures,
@@ -52,16 +52,24 @@ console.log(dim(`  الشعار: ${settings.logo_url ?? 'لم يُرفع بعد'
 
 // ---------- المشايخ ----------
 console.log(head('المشايخ · القاعدة ٦.٦'))
-const active = await getSheikhs(true)
-const all = await getSheikhs(false)
-console.log(dim(`  النشطون: ${active.map((s) => s.name).join(' · ')}`))
-console.log(dim(`  الكل    : ${all.length}`))
-expect(active.length === 2 && all.length === 3, 'الشيخ غير النشط يخرج من القائمة الافتراضية')
+// القائمة تُشتقّ من لقطات اللقاءات لا من جدول القوالب (هجرة ٠٠٢)،
+// والقاعدة ٦.٦ محفوظة: القالب الموسوم غير نشط يُخرِج صاحبَه منها
+const options = await getSheikhOptions()
+console.log(dim(`  في التصفية: ${options.map((s) => s.name).join(' · ')}`))
+expect(options.length === 2, `القائمة فيها ${options.length} شيخاً — غير النشط خارجها`)
 
-const inactive = all.find((s) => !s.is_active)!
-console.log(dim(`  غير النشط: ${inactive.name} (${inactive.slug})`))
+const inactiveSlug = 'ahmed-alnasser'
+expect(
+  !options.some((s) => s.slug === inactiveSlug),
+  'الشيخ غير النشط لا يظهر في التصفية رغم أن له لقاءً'
+)
 
-const missing = await getSheikhBySlug('la-yujad-abadan')
+// صفحة الشيخ تعمل من اللقطة، ولو حُذف قالبه من القائمة
+const pageOfInactive = await getSheikhPage(inactiveSlug)
+expect(pageOfInactive !== null, 'صفحة الشيخ غير النشط تبقى عاملة (٦.٦)')
+console.log(dim(`  صفحته: ${pageOfInactive?.name ?? '—'}`))
+
+const missing = await getSheikhPage('la-yujad-abadan')
 expect(missing === null, 'رابط شيخ غير موجود يعيد null — لتعرض ٤٠٤ (المعيار ١٠)')
 
 // ---------- اللقاءات: الوعاءان ----------
@@ -95,12 +103,21 @@ expect(
 
 // ---------- القاعدة ٦.٦ · لقاء الشيخ غير النشط ----------
 console.log(head('لقاءات الشيخ غير النشط'))
-const hisLectures = every.filter((l) => l.sheikh_slug === inactive.slug)
+const hisLectures = every.filter((l) => l.sheikh_slug === inactiveSlug)
 expect(hisLectures.length > 0, `لقاءاته باقية ظاهرة (${hisLectures.length})`)
 expect(
   hisLectures.every((l) => past.some((p) => p.id === l.id)),
   'وكلها في «السابقة»'
 )
+
+// ---------- النموذج القالبي · هجرة ٠٠٢ ----------
+console.log(head('لقطة الشيخ داخل السلسلة'))
+expect(
+  every.every((l) => Boolean(l.sheikh_name) && Boolean(l.sheikh_slug)),
+  'كل لقاء يحمل اسم شيخه ورابطه من اللقطة لا من جدول القوالب'
+)
+const snapPairs = new Set(every.map((l) => `${l.sheikh_slug}|${l.sheikh_name}`))
+console.log(dim(`  اللقطات: ${[...snapPairs].join(' · ')}`))
 
 // ---------- الوراثة ----------
 console.log(head('الوراثة · لقاء ← سلسلة ← إعدادات'))

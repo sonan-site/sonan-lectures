@@ -1,4 +1,4 @@
-import { filterLectures, getLectures, getSeriesSlugMap, getSheikhs } from '@/lib/queries'
+import { filterLectures, getLectures, getSeriesSlugMap, getSheikhOptions } from '@/lib/queries'
 import { dayKey } from '@/lib/datetime'
 import { buildMonthVM, toHeroVM, toLectureVM } from '@/lib/view-model'
 import type { LectureType, Period } from '@/lib/types'
@@ -34,7 +34,7 @@ export default async function HomePage({
 
   const [rows, sheikhs, slugMap] = await Promise.all([
     getLectures(),
-    getSheikhs(true),
+    getSheikhOptions(),
     getSeriesSlugMap(),
   ])
 
@@ -79,7 +79,7 @@ export default async function HomePage({
       hero={hero}
       tableRows={tableRows}
       allRows={allVms}
-      sheikhs={sheikhs.map((s) => ({ slug: s.slug, name: s.name }))}
+      sheikhs={sheikhs}
       period={period}
       sheikhSlug={sheikhSlug}
       type={type}

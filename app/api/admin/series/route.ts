@@ -19,6 +19,11 @@ import {
  * اللقاء المنفرد ليس استثناءً: يُنشأ له سلسلة من لقاء واحد، حفاظاً على
  * قاعدة واحدة بلا حالات خاصة (ADR-0001).
  *
+ * ⚠️ **النموذج القالبي (هجرة ٠٠٢):** اسم الشيخ ورابطه يُنسخان لقطةً داخل
+ * السلسلة عند إنشائها، ولا يُقرآن بعدها من جدول القوالب. فحذف الشيخ من
+ * القائمة لا يمسّ السلسلة، وتعديل اسمه لا يسري رجعياً على ما أُنشئ قبله.
+ * والمرجع `sheikh_id` يبقى للربط وحده — وقد يصير `null`.
+ *
  * الترتيب `ord` يُسنَد هنا تسلسلياً ١..ن على المواعيد **الباقية** بعد ما
  * حذفه المشرف من المعاينة — فحذف موعد من أربعة يُنتج ثلاثة صفوف ترتيبها
  * ١ و٢ و٣ بلا فجوة (معيار القبول ١١).
@@ -45,6 +50,8 @@ export async function POST(request: Request) {
     slug: string
     book: string | null
     sheikh_id: string
+    sheikh_name?: string
+    sheikh_slug?: string
     type: ReturnType<typeof requiredType>
     place: string | null
     map_url: string | null
@@ -95,13 +102,17 @@ export async function POST(request: Request) {
   // الشيخ موجود ونشط — القاعدة ٦.٦ تُخرج غير النشط من اختيار السلسلة
   const { data: sheikh, error: shErr } = await supabaseAdmin
     .from('sheikhs')
-    .select('id, is_active')
+    .select('id, name, slug, is_active')
     .eq('id', series.sheikh_id)
     .maybeSingle()
 
   if (shErr) return fail('تعذّر التحقّق من الشيخ.', 503)
   if (!sheikh) return fail('الشيخ المُختار غير موجود.', 422)
   if (!sheikh.is_active) return fail('الشيخ المُختار غير نشط، فلا تُنشأ له سلسلة جديدة.', 422)
+
+  // اللقطة تُؤخذ هنا، من القالب كما هو في هذه اللحظة
+  series.sheikh_name = sheikh.name as string
+  series.sheikh_slug = sheikh.slug as string
 
   const { data: created, error: seriesErr } = await supabaseAdmin
     .from('series')

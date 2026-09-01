@@ -4,8 +4,8 @@ import {
   filterLectures,
   getLectures,
   getSeriesSlugMap,
-  getSheikhBySlug,
-  getSheikhs,
+  getSheikhOptions,
+  getSheikhPage,
 } from '@/lib/queries'
 import { dayKey } from '@/lib/datetime'
 import { buildMonthVM, toHeroVM, toLectureVM } from '@/lib/view-model'
@@ -39,7 +39,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }): Promise<Metadata> {
   const { slug } = await params
-  const sheikh = await getSheikhBySlug(slug)
+  const sheikh = await getSheikhPage(slug)
   if (!sheikh) return { title: 'الصفحة غير موجودة · جمعية سنن' }
   return {
     title: `لقاءات ${sheikh.name} · جمعية سنن`,
@@ -57,7 +57,9 @@ export default async function SheikhPage({
   const { slug } = await params
   const sp = await searchParams
 
-  const sheikh = await getSheikhBySlug(slug)
+  // الهوية من لقطة السلسلة لا من جدول القوالب: الرابط يبقى عاملاً بعد حذف
+  // الشيخ من القائمة، ما دامت له سلسلة حيّة
+  const sheikh = await getSheikhPage(slug)
   // رابط غير موجود ⇐ صفحة ٤٠٤ عربية (القسم ٧ · معيار القبول ١٠)
   if (!sheikh) notFound()
 
@@ -68,14 +70,14 @@ export default async function SheikhPage({
   const [rows, slugMap, activeSheikhs] = await Promise.all([
     getLectures({ sheikhSlug: slug }),
     getSeriesSlugMap(),
-    getSheikhs(true),
+    getSheikhOptions(),
   ])
 
-  // القائمة تحمل النشطين، ويُضاف إليها شيخ الصفحة إن كان غير نشط حتى تعرض
-  // اختياره الحالي بدل «كل المشايخ» — والقاعدة ٦.٦ تُخرجه من التصفية لا من صفحته
+  // القائمة العامة، ويُضاف إليها شيخ الصفحة إن غاب عنها — كأن يكون قالبه
+  // موسوماً غير نشط (٦.٦) أو محذوفاً — حتى تعرض اختياره الحالي بدل «كل المشايخ»
   const sheikhOptions = activeSheikhs.some((s) => s.slug === sheikh.slug)
-    ? activeSheikhs.map((s) => ({ slug: s.slug, name: s.name }))
-    : [{ slug: sheikh.slug, name: sheikh.name }, ...activeSheikhs.map((s) => ({ slug: s.slug, name: s.name }))]
+    ? activeSheikhs
+    : [{ slug: sheikh.slug, name: sheikh.name }, ...activeSheikhs]
 
   const now = Date.now()
   const allVms = rows.map((l) => toLectureVM(l, slugMap))

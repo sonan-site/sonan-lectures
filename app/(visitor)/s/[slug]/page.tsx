@@ -5,7 +5,7 @@ import {
   getLecturesBySeriesId,
   getSeriesBySlug,
   getSeriesSlugMap,
-  getSheikhs,
+  getSheikhOptions,
 } from '@/lib/queries'
 import { dayKey } from '@/lib/datetime'
 import { buildMonthVM, toHeroVM, toLectureVM } from '@/lib/view-model'
@@ -69,7 +69,7 @@ export default async function SeriesPage({
   const [rows, slugMap, activeSheikhs] = await Promise.all([
     getLecturesBySeriesId(series.id),
     getSeriesSlugMap(),
-    getSheikhs(true),
+    getSheikhOptions(),
   ])
 
   const now = Date.now()
@@ -95,7 +95,7 @@ export default async function SeriesPage({
       hero={hero}
       tableRows={tableRows}
       allRows={allVms}
-      sheikhs={activeSheikhs.map((s) => ({ slug: s.slug, name: s.name }))}
+      sheikhs={activeSheikhs}
       period={period}
       sheikhSlug=""
       type={type}
