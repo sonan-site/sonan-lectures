@@ -1,0 +1,6 @@
+# لا يلزم البناء ولا التشغيل — يبقى في المستودع ولا يُرفع
+docs/
+prototype/
+scripts/
+BUILD-INSTRUCTION.md
+DECISIONS.md

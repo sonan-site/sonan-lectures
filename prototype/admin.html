@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لوحة التحكم · اللقاءات العلمية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--petrol:#2A3F46;--petrol-deep:#1C2C32;--brown:#7D7168;--warm:#8C847D;
+--beige:#F3EFE9;--paper:#FCFAF7;--line:#E2DCD3;--live:#C2452D;--cancel:#6E3B33;--ok:#3F6B57;--r:10px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{max-width:100%}
+body{font-family:'Tajawal',system-ui,sans-serif;background:var(--beige);color:var(--petrol);line-height:1.6;font-size:16px;overflow-x:hidden}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+
+.top{background:var(--petrol);color:var(--beige)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 20px}
+.brand{display:flex;align-items:center;gap:13px}
+.logo{width:112px;height:46px;border-radius:9px;background:var(--beige);display:grid;place-items:center;overflow:hidden;padding:6px;flex:0 0 auto}
+.logo img{max-width:100%;max-height:100%;object-fit:contain}
+.logo .ph{display:none;font-size:9.5px;font-weight:700;color:#B0A69B;text-align:center;line-height:1.5;border:1px dashed #C9BFB4;border-radius:6px;width:100%;height:100%;place-items:center}
+.brand b{display:block;font-size:15.5px;font-weight:800}
+.brand span{display:block;font-size:12px;color:#B9C4C8;font-weight:500}
+.out{background:none;border:1px solid #4A6169;color:#B9C4C8;font-family:inherit;font-size:12.5px;font-weight:600;padding:6px 14px;border-radius:99px;cursor:pointer}
+.out:hover{border-color:#7E959C;color:#fff}
+
+.nav{background:var(--paper);border-bottom:1px solid var(--line)}
+.nav .wrap{display:flex;gap:4px;padding:0 20px;overflow:auto}
+.nav button{border:0;background:none;font-family:inherit;font-size:14.5px;font-weight:700;color:var(--brown);
+  padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.nav button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.nav button[aria-selected="true"]{color:var(--petrol);border-bottom-color:var(--petrol)}
+.bnav{display:none}
+
+main{padding:24px 0 60px}
+.head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.head h2{font-size:21px;font-weight:800;letter-spacing:-.3px}
+.head p{font-size:13px;color:var(--warm);font-weight:500;margin-top:1px}
+
+.btn{border:0;font-family:inherit;font-size:14px;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.btn.p{background:var(--petrol);color:#fff}
+.btn.p:hover{background:var(--petrol-deep)}
+.btn.g{background:#fff;color:var(--brown);border:1px solid var(--line)}
+.btn.g:hover{border-color:var(--brown)}
+.btn.d{background:#fff;color:var(--cancel);border:1px solid #E0CBC6}
+.btn.sm{font-size:12.5px;padding:6px 13px;border-radius:8px}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:2.5px solid var(--brown);outline-offset:2px}
+
+.panel{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.panel+.panel{margin-top:16px}
+.ph2{padding:15px 18px;border-bottom:1px solid var(--line);background:var(--paper);font-size:14.5px;font-weight:800;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.pb{padding:18px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.f{display:block}
+.f label{display:block;font-size:12.5px;font-weight:700;color:var(--brown);margin-bottom:5px}
+.f label em{font-style:normal;color:#B8AFA5;font-weight:600}
+input[type=text],input[type=date],input[type=time],input[type=number],input[type=url],select,textarea{
+  width:100%;font-family:inherit;font-size:14.5px;font-weight:600;color:var(--petrol);
+  border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#fff}
+input::placeholder{color:#C3BAB0;font-weight:500}
+.hint{font-size:11.5px;color:var(--warm);font-weight:600;margin-top:5px}
+.radios{display:flex;gap:8px;flex-wrap:wrap}
+.radios label{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:9px;padding:9px 14px;
+  font-size:13.5px;font-weight:700;cursor:pointer;background:#fff;margin:0;color:var(--petrol)}
+.radios label:has(input:checked){border-color:var(--petrol);background:#F5F8F8;box-shadow:inset 0 0 0 1px var(--petrol)}
+.radios input{accent-color:var(--petrol);margin:0}
+.sw{display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:700;cursor:pointer}
+.sw input{width:38px;height:22px;appearance:none;background:var(--line);border-radius:99px;position:relative;cursor:pointer;transition:.15s}
+.sw input::after{content:"";position:absolute;inset-inline-end:3px;top:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:.15s}
+.sw input:checked{background:var(--ok)}
+.sw input:checked::after{inset-inline-end:19px}
+.sw.warn input:checked{background:var(--cancel)}
+
+table{width:100%;border-collapse:collapse}
+thead th{background:var(--paper);font-size:11.5px;font-weight:800;color:var(--brown);text-align:center;padding:11px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody td{padding:12px 8px;border-bottom:1px solid #F4F0EA;text-align:center;font-size:14px;vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#FDFCFA}
+tbody tr.off td{color:var(--warm)}
+tbody tr.off .tt{text-decoration:line-through}
+.tt{font-weight:700}
+.sub{display:block;font-size:11px;color:var(--warm);font-weight:600}
+.chip{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:99px;white-space:nowrap}
+.chip.on{background:#EAF0F1;color:var(--petrol)}
+.chip.rem{background:#F1EDE8;color:var(--brown)}
+.chip.mix{background:var(--petrol);color:#fff}
+.chip.no{background:var(--cancel);color:#fff}
+.chip.ov{background:#F6EEDC;color:#8A6D2F}
+.chip.act{background:#E6EFEA;color:var(--ok)}
+.chip.ina{background:#EFEBE6;color:var(--warm)}
+
+.prev{border:1px solid var(--line);border-radius:11px;background:var(--paper);max-height:270px;overflow:auto}
+.prow{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid #EFEAE3;font-size:13.5px}
+.prow:last-child{border-bottom:0}
+.prow b{width:26px;font-weight:800;color:var(--brown);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.prow span{flex:1;font-weight:600;text-align:start}
+.prow u{text-decoration:none;font-size:11.5px;color:var(--warm);font-weight:600}
+.prow button{border:0;background:none;color:var(--cancel);font-size:17px;cursor:pointer;font-family:inherit;line-height:1;padding:0 4px;opacity:.5}
+.prow button:hover{opacity:1}
+.prow.gone{opacity:.4}
+.prow.gone span{text-decoration:line-through}
+
+.drop{display:flex;align-items:center;gap:18px;border:2px dashed var(--line);border-radius:13px;padding:18px;
+  background:var(--paper);transition:.15s;flex-wrap:wrap}
+.drop.over{border-color:var(--petrol);background:#F5F8F8}
+.dprev{width:170px;height:76px;flex:0 0 auto;background:var(--petrol);border-radius:10px;display:grid;place-items:center;overflow:hidden;padding:9px}
+.dprev img{max-width:100%;max-height:100%;object-fit:contain}
+.dprev span{font-size:12px;color:#8FA3A9;font-weight:600}
+.dtxt{flex:1;min-width:200px}
+.dtxt b{display:block;font-size:14.5px;font-weight:700}
+.empty{text-align:center;padding:40px 20px;color:var(--warm);font-size:14px}
+.empty b{display:block;font-size:15.5px;font-weight:700;color:var(--brown);margin-bottom:5px}
+.bar2{display:flex;gap:10px;justify-content:flex-end;padding-top:16px;margin-top:16px;border-top:1px solid var(--line);flex-wrap:wrap}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filters select{width:auto;min-width:150px}
+.toast{position:fixed;inset-inline-start:50%;transform:translateX(-50%);bottom:26px;background:var(--petrol);color:#fff;
+  padding:11px 22px;border-radius:99px;font-size:14px;font-weight:700;opacity:0;pointer-events:none;transition:.25s;z-index:99}
+.toast.on{opacity:1;bottom:34px}
+
+dialog{border:0;border-radius:16px;padding:0;width:min(520px,calc(100vw - 26px));max-width:none;margin:auto;background:#fff;color:var(--petrol);overflow:hidden}
+dialog::backdrop{background:rgba(28,44,50,.6)}
+.dh{background:var(--petrol);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.dh b{font-size:15px;font-weight:800}
+.dh button{background:none;border:0;color:#B9C4C8;font-size:24px;cursor:pointer;font-family:inherit;line-height:1;padding:0 4px}
+.db{padding:18px;max-height:70vh;overflow:auto}
+.inh{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:12.5px;color:var(--brown);font-weight:600;margin-bottom:14px}
+
+@media (max-width:820px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .nav{display:none}
+  .bnav{display:flex;position:fixed;inset-inline:0;bottom:0;background:#fff;border-top:1px solid var(--line);
+    z-index:50;padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+  .bnav button{flex:1;border:0;background:none;font-family:inherit;font-size:11px;font-weight:700;color:var(--warm);
+    padding:7px 2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;border-radius:10px}
+  .bnav button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .bnav button[aria-selected="true"]{color:var(--petrol);background:var(--beige)}
+  main{padding:18px 0 96px}
+  .wrap{padding:0 14px}
+  .top .wrap{padding:12px 14px}
+  .head h2{font-size:18.5px}
+  .toast{bottom:86px}.toast.on{bottom:94px}
+  .tblwrap{overflow-x:auto}
+  .bar2{justify-content:stretch}
+  .bar2 .btn{flex:1;justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <div class="brand">
+    <div class="logo"><img src="logo.png" alt="سنن" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"><span class="ph">الشعار</span></div>
+    <div><b>لوحة التحكم</b><span>اللقاءات العلمية · جمعية سنن</span></div>
+  </div>
+  <button class="out">خروج</button>
+</div></header>
+
+<nav class="nav"><div class="wrap" id="topnav"></div></nav>
+
+<main class="wrap">
+  <section id="t-lec"></section>
+  <section id="t-ser" hidden></section>
+  <section id="t-shk" hidden></section>
+  <section id="t-set" hidden></section>
+</main>
+
+<nav class="bnav" id="botnav"></nav>
+<div class="toast" id="toast"></div>
+<dialog id="dlg"><div class="dh"><b id="dlgT"></b><button id="dlgX" aria-label="إغلاق">×</button></div><div class="db" id="dlgB"></div></dialog>
+
+<script>
+/* ============ أدوات ============ */
+const TZ='Asia/Riyadh';
+const fH=new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{day:'numeric',month:'long',year:'numeric',timeZone:TZ});
+const fD=new Intl.DateTimeFormat('ar-SA',{weekday:'long',timeZone:TZ});
+const fT=new Intl.DateTimeFormat('ar-SA',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:TZ});
+const AR='٠١٢٣٤٥٦٧٨٩', ar=n=>String(n).replace(/\d/g,d=>AR[+d]);
+const uid=()=>Math.random().toString(36).slice(2,9);
+const AR2EN={'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'};
+const TRANS={'ا':'a','أ':'a','إ':'a','آ':'a','ب':'b','ت':'t','ث':'th','ج':'j','ح':'h','خ':'kh','د':'d','ذ':'dh',
+'ر':'r','ز':'z','س':'s','ش':'sh','ص':'s','ض':'d','ط':'t','ظ':'z','ع':'a','غ':'gh','ف':'f','ق':'q','ك':'k',
+'ل':'l','م':'m','ن':'n','ه':'h','ة':'h','و':'w','ي':'y','ى':'a','ء':'','ئ':'','ؤ':''};
+function slugify(t){
+  return String(t).trim().split('').map(c=>AR2EN[c]||TRANS[c]||(/[a-zA-Z0-9]/.test(c)?c.toLowerCase():' '))
+    .join('').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,48);
+}
+function uniqueSlug(base,taken){let s=base||'series',i=2;while(taken.includes(s)){s=`${base}-${i++}`}return s}
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2100)}
+function mk(dateStr,timeStr){return new Date(`${dateStr}T${timeStr}:00+03:00`)}
+function ymd(d){return new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:TZ}).format(d)}
+function hm(d){return new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:TZ}).format(d)}
+
+/* ============ الحالة (وهمية) ============ */
+const CFG={place:'مقر جمعية سنن',map:'https://maps.google.com/?q=sonan',dur:90,logo:null};
+const TYPE={onsite:['حضوري','on'],remote:['عن بُعد','rem'],hybrid:['حضوري وعن بُعد','mix']};
+let SH=[
+ {id:'h1',name:'الشيخ عبدالله المحمد',slug:'abdullah-almohammed',active:true},
+ {id:'h2',name:'الشيخ سليمان الفهد',slug:'sulaiman-alfahd',active:true},
+ {id:'h3',name:'الشيخ خالد العمر',slug:'khaled-alomar',active:true},
+ {id:'h4',name:'الشيخ أحمد الناصر',slug:'ahmed-alnasser',active:false}
+];
+let SE=[],LE=[];
+(function seed(){
+  const mkS=(t,bk,sh,ty,dur,link,place)=>{const s={id:uid(),title:t,book:bk,sh,type:ty,dur,
+    slug:uniqueSlug(slugify(t),SE.map(x=>x.slug)),
+    place:place||null,map:place?'https://maps.google.com':null,link:link||null};SE.push(s);return s};
+  const gen=(s,firstOff,step,count,time)=>{
+    for(let i=0;i<count;i++){const b=new Date();b.setDate(b.getDate()+firstOff+i*step);
+      LE.push({id:uid(),se:s.id,ord:i+1,start:mk(ymd(b),time),dur:null,type:null,place:null,link:null,off:false})}};
+  const a=mkS('شرح بلوغ المرام','بلوغ المرام من أدلة الأحكام','h1','hybrid',90,'https://meet.example/bulugh');
+  gen(a,-28,7,12,'20:00');
+  const b=mkS('شرح عمدة الأحكام','عمدة الأحكام للمقدسي','h2','onsite',60);
+  gen(b,-14,7,8,'17:30');
+  const c=mkS('الجمع بين الصحيحين','الجمع بين الصحيحين للحميدي','h3','remote',60,'https://meet.example/sahihain');
+  gen(c,-7,7,10,'21:30');
+  LE.filter(x=>x.se===c.id)[2].off=true;
+  const d=mkS('شرح الورقات في أصول الفقه','الورقات لإمام الحرمين','h1','onsite',60,null,'جامع الملك خالد — بريدة');
+  gen(d,2,7,6,'17:30');
+  const e=mkS('منهج طالب العلم في الطلب','','h4','remote',75,'https://meet.example/manhaj');
+  gen(e,3,0,1,'21:00');
+  LE.sort((x,y)=>x.start-y.start);
+})();
+
+const ser=id=>SE.find(s=>s.id===id);
+const shk=id=>SH.find(s=>s.id===id);
+const cnt=id=>LE.filter(l=>l.se===id).length;
+function eff(l){const s=ser(l.se);return{
+  type:l.type||s.type, dur:l.dur||s.dur,
+  place:l.place||s.place||CFG.place, map:l.place?'https://maps.google.com':(s.map||CFG.map),
+  link:l.link||s.link}}
+function overridden(l){return !!(l.type||l.dur||l.place||l.link)}
+function status(l){const e=eff(l),end=+l.start+e.dur*60000;
+  if(l.off)return['ملغى','no'];
+  if(Date.now()<+l.start)return['قادم',''];
+  if(Date.now()<end)return['جارٍ الآن','no'];
+  return['انتهى','']}
+
+/* ============ التبويبات ============ */
+const ICON={
+ lec:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+ ser:'<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
+ shk:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/>',
+ set:'<path d="M4 7h9M18 7h2M4 17h5M13 17h7"/><circle cx="15.5" cy="7" r="2"/><circle cx="11" cy="17" r="2"/>'};
+const TABS=[['lec','اللقاءات'],['ser','السلاسل'],['shk','المشايخ'],['set','الإعدادات']];
+let TAB='lec';
+function navHTML(){return TABS.map(([k,n])=>
+ `<button data-tab="${k}" aria-selected="${k===TAB}"><svg viewBox="0 0 24 24">${ICON[k]}</svg>${n}</button>`).join('')}
+function paintNav(){document.getElementById('topnav').innerHTML=navHTML();document.getElementById('botnav').innerHTML=navHTML()}
+function go(k){TAB=k;paintNav();
+  TABS.forEach(([t])=>document.getElementById('t-'+t).hidden=(t!==k));
+  ({lec:vLec,ser:vSer,shk:vShk,set:vSet})[k]();window.scrollTo({top:0})}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)go(b.dataset.tab)});
+
+/* ============ تبويب: اللقاءات ============ */
+let FL={se:'',when:'up'};
+function vLec(){
+  const list=LE.filter(l=>{
+    const up=+l.start>Date.now()||(status(l)[0]==='جارٍ الآن');
+    if(FL.when==='up'&&!up)return false;
+    if(FL.when==='past'&&up)return false;
+    if(FL.se&&l.se!==FL.se)return false;return true})
+   .sort((a,b)=>FL.when==='up'?a.start-b.start:b.start-a.start);
+  document.getElementById('t-lec').innerHTML=`
+  <div class="head">
+    <div><h2>اللقاءات</h2><p>${ar(LE.length)} لقاءً في ${ar(SE.length)} سلاسل · التعديل هنا يخصّ اللقاء وحده</p></div>
+    <button class="btn p" data-act="newser">＋ سلسلة جديدة</button>
+  </div>
+  <div class="panel">
+    <div class="ph2"><span>قائمة اللقاءات</span>
+      <span class="filters">
+        <select id="flSe"><option value="">كل السلاسل</option>
+          ${SE.map(s=>`<option value="${s.id}" ${FL.se===s.id?'selected':''}>${esc(s.title)}</option>`).join('')}</select>
+        <select id="flWhen">
+          <option value="up" ${FL.when==='up'?'selected':''}>القادمة</option>
+          <option value="past" ${FL.when==='past'?'selected':''}>السابقة</option></select>
+      </span></div>
+    <div class="tblwrap">${list.length?`<table>
+      <thead><tr><th>الترتيب</th><th>اللقاء</th><th>الشيخ</th><th>الموعد</th><th>المدة</th><th>النوع</th><th>الحالة</th><th></th></tr></thead>
+      <tbody>${list.map(l=>{const s=ser(l.se),E=eff(l),[st,sc]=status(l),T=TYPE[E.type];
+      return `<tr class="${l.off?'off':''}">
+        <td style="font-weight:800;color:var(--brown)">${ar(l.ord)}</td>
+        <td><span class="tt">${esc(s.title)}</span>${s.book?`<span class="sub">${esc(s.book)}</span>`:''}
+            ${overridden(l)?'<span class="chip ov" style="margin-top:4px">مختلف عن السلسلة</span>':''}</td>
+        <td>${esc(shk(s.sh).name)}</td>
+        <td>${fH.format(l.start)}<span class="sub">${fD.format(l.start)} · ${fT.format(l.start)}</span></td>
+        <td>${ar(E.dur)} د</td>
+        <td><span class="chip ${T[1]}">${T[0]}</span></td>
+        <td><span class="chip ${sc}">${st}</span></td>
+        <td><button class="btn g sm" data-edit="${l.id}">تعديل</button></td></tr>`}).join('')}</tbody>
+    </table>`:`<div class="empty"><b>لا لقاءات في هذا العرض</b>غيّر التصفية أو أنشئ سلسلة جديدة.</div>`}</div>
+  </div>`;
+  document.getElementById('flSe').onchange=e=>{FL.se=e.target.value;vLec()};
+  document.getElementById('flWhen').onchange=e=>{FL.when=e.target.value;vLec()};
+}
+
+/* ---- نافذة تعديل لقاء مفرد ---- */
+function editLec(id){
+  const l=LE.find(x=>x.id===id),s=ser(l.se),E=eff(l);
+  document.getElementById('dlgT').textContent=`تعديل اللقاء ${ar(l.ord)} — ${s.title}`;
+  document.getElementById('dlgB').innerHTML=`
+  <div class="inh">القيم الفارغة ترث السلسلة: النوع «${TYPE[s.type][0]}» · المدة ${ar(s.dur)} دقيقة · ${s.place||CFG.place}</div>
+  <div class="grid2">
+    <div class="f"><label>التاريخ <em>(ميلادي — يُعرض هجرياً)</em></label><input type="date" id="eD" value="${ymd(l.start)}"></div>
+    <div class="f"><label>الوقت</label><input type="time" id="eT" value="${hm(l.start)}"></div>
+  </div>
+  <p class="hint" id="eHij"></p>
+  <div class="f" style="margin-top:14px"><label>المدة بالدقائق <em>(اتركه فارغاً ليرث ${ar(s.dur)})</em></label>
+    <input type="number" id="eDur" min="5" max="600" value="${l.dur??''}" placeholder="${s.dur}"></div>
+  <div class="f" style="margin-top:14px"><label>النوع</label>
+    <div class="radios">
+      <label><input type="radio" name="eTy" value="" ${!l.type?'checked':''}>كما السلسلة</label>
+      ${Object.entries(TYPE).map(([k,v])=>`<label><input type="radio" name="eTy" value="${k}" ${l.type===k?'checked':''}>${v[0]}</label>`).join('')}
+    </div></div>
+  <div class="f" style="margin-top:14px"><label>المكان <em>(فارغ ⇐ ${esc(s.place||CFG.place)})</em></label>
+    <input type="text" id="ePl" value="${esc(l.place??'')}" placeholder="${esc(s.place||CFG.place)}"></div>
+  <div class="f" style="margin-top:14px"><label>رابط الدخول <em>(فارغ ⇐ رابط السلسلة)</em></label>
+    <input type="url" id="eLk" value="${esc(l.link??'')}" placeholder="${esc(s.link||'لا يوجد')}" dir="ltr"></div>
+  <label class="sw warn" style="margin-top:18px"><input type="checkbox" id="eOff" ${l.off?'checked':''}>إلغاء هذا اللقاء
+    <span style="font-weight:600;color:var(--warm);font-size:12px">— يبقى ظاهراً للزائر مشطوباً</span></label>
+  <div class="bar2"><button class="btn g" data-close>إلغاء</button><button class="btn p" id="eSave">حفظ</button></div>`;
+  const upd=()=>{const d=document.getElementById('eD').value,t=document.getElementById('eT').value;
+    if(d&&t){const x=mk(d,t);document.getElementById('eHij').textContent=`${fD.format(x)} ${fH.format(x)} — ${fT.format(x)}`}};
+  document.getElementById('eD').oninput=upd;document.getElementById('eT').oninput=upd;upd();
+  document.getElementById('eSave').onclick=()=>{
+    const d=document.getElementById('eD').value,t=document.getElementById('eT').value;
+    if(!d||!t)return toast('التاريخ والوقت مطلوبان');
+    l.start=mk(d,t);
+    const du=document.getElementById('eDur').value.trim();l.dur=du?+du:null;
+    l.type=document.querySelector('[name=eTy]:checked').value||null;
+    l.place=document.getElementById('ePl').value.trim()||null;
+    l.link=document.getElementById('eLk').value.trim()||null;
+    l.off=document.getElementById('eOff').checked;
+    const E=eff(l);
+    if(E.type!=='onsite'&&!E.link)return toast('لقاء غير حضوري يلزمه رابط دخول');
+    LE.sort((a,b)=>a.start-b.start);dlg.close();vLec();toast('حُفظ التعديل');
+  };
+  dlg.showModal();
+}
+
+/* ============ تبويب: السلاسل ============ */
+function vSer(){
+  document.getElementById('t-ser').innerHTML=`
+  <div class="head"><div><h2>السلاسل</h2><p>الوعاء الذي يُدخَل مرة وتُولَّد منه اللقاءات</p></div>
+    <button class="btn p" data-act="newser">＋ سلسلة جديدة</button></div>
+  ${SE.length?`<div class="panel"><div class="tblwrap"><table>
+    <thead><tr><th>السلسلة</th><th>الشيخ</th><th>النوع</th><th>عدد اللقاءات</th><th>رابط الصفحة</th><th></th></tr></thead>
+    <tbody>${SE.map(s=>`<tr>
+      <td><span class="tt">${esc(s.title)}</span>${s.book?`<span class="sub">${esc(s.book)}</span>`:''}</td>
+      <td>${esc(shk(s.sh).name)}</td>
+      <td><span class="chip ${TYPE[s.type][1]}">${TYPE[s.type][0]}</span></td>
+      <td style="font-weight:800">${ar(cnt(s.id))}</td>
+      <td dir="ltr" style="font-family:ui-monospace,monospace;font-size:12.5px;color:var(--brown)">/s/${esc(s.slug)}</td>
+      <td><button class="btn g sm" data-copy="/s/${esc(s.slug)}">نسخ</button></td>
+    </tr>`).join('')}</tbody></table></div></div>`
+  :`<div class="panel"><div class="empty"><b>لا سلاسل بعد</b>ابدأ بإنشاء سلسلة، ولو كانت لقاءً واحداً.</div></div>`}`;
+}
+
+/* ---- نافذة سلسلة جديدة + توليد التواريخ ---- */
+let PREV=[];
+function newSer(){
+  document.getElementById('dlgT').textContent='سلسلة جديدة';
+  document.getElementById('dlgB').innerHTML=`
+  <div class="f"><label>عنوان اللقاء</label><input type="text" id="nT" placeholder="شرح بلوغ المرام"></div>
+  <div class="f" style="margin-top:14px"><label>اسم الكتاب <em>(اختياري — يظهر تحت العنوان)</em></label>
+    <input type="text" id="nB" placeholder="بلوغ المرام من أدلة الأحكام"></div>
+  <div class="f" style="margin-top:14px"><label>رابط صفحة السلسلة</label>
+    <input type="text" id="nG" placeholder="يُقترح تلقائياً من العنوان" dir="ltr">
+    <p class="hint">حروف لاتينية صغيرة وشُرَط فقط · انشره عند إعلان الشرح · لا يُغيَّر بعد نشره</p></div>
+  <div class="f" style="margin-top:14px"><label>الشيخ</label><select id="nS">
+    ${SH.filter(x=>x.active).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></div>
+  <div class="f" style="margin-top:14px"><label>النوع</label><div class="radios" id="nTy">
+    ${Object.entries(TYPE).map(([k,v],i)=>`<label><input type="radio" name="nty" value="${k}" ${i===0?'checked':''}>${v[0]}</label>`).join('')}
+  </div></div>
+  <div class="f" style="margin-top:14px" id="wPl"><label>المكان</label>
+    <input type="text" id="nPl" value="${esc(CFG.place)}">
+    <p class="hint">مُعبّأ من الإعدادات — غيّره فقط إذا خرج اللقاء عن المقر</p></div>
+  <div class="f" style="margin-top:14px" id="wLk"><label>رابط الدخول</label>
+    <input type="url" id="nLk" placeholder="https://…" dir="ltr"></div>
+  <div class="grid3" style="margin-top:14px">
+    <div class="f"><label>تاريخ أول لقاء</label><input type="date" id="nD"></div>
+    <div class="f"><label>الوقت</label><input type="time" id="nTm" value="20:00"></div>
+    <div class="f"><label>المدة (دقيقة)</label><input type="number" id="nDu" value="90" min="5" max="600"></div>
+  </div>
+  <div class="grid2" style="margin-top:14px">
+    <div class="f"><label>التكرار</label><select id="nR">
+      <option value="7">كل أسبوع</option><option value="14">كل أسبوعين</option><option value="1">يومياً</option></select></div>
+    <div class="f"><label>عدد اللقاءات</label><input type="number" id="nC" value="1" min="1" max="60">
+      <p class="hint">اتركه ١ للقاء المنفرد</p></div>
+  </div>
+  <div style="margin-top:18px">
+    <label style="display:block;font-size:12.5px;font-weight:700;color:var(--brown);margin-bottom:7px">
+      التواريخ المولّدة <em style="font-style:normal;color:#B8AFA5">— احذف أي موعد لا يناسب (عيد، سفر…)</em></label>
+    <div class="prev" id="nPrev"><div class="empty" style="padding:22px">اختر تاريخ أول لقاء لتظهر التواريخ</div></div>
+  </div>
+  <div class="bar2"><button class="btn g" data-close>إلغاء</button><button class="btn p" id="nSave">إنشاء السلسلة</button></div>`;
+  const $=i=>document.getElementById(i);
+  function typeUI(){const t=document.querySelector('[name=nty]:checked').value;
+    $('wPl').style.display=t==='remote'?'none':'block';
+    $('wLk').style.display=t==='onsite'?'none':'block'}
+  function regen(){
+    const d=$('nD').value,t=$('nTm').value,step=+$('nR').value,c=Math.max(1,Math.min(60,+$('nC').value||1));
+    if(!d||!t){$('nPrev').innerHTML='<div class="empty" style="padding:22px">اختر تاريخ أول لقاء لتظهر التواريخ</div>';PREV=[];return}
+    PREV=[];const base=new Date(`${d}T12:00:00+03:00`);
+    for(let i=0;i<c;i++){const b=new Date(base);b.setDate(b.getDate()+i*(c>1?step:0));
+      PREV.push({start:mk(ymd(b),t),gone:false})}
+    paintPrev();
+  }
+  function paintPrev(){
+    $('nPrev').innerHTML=PREV.map((p,i)=>`<div class="prow ${p.gone?'gone':''}">
+      <b>${ar(i+1)}</b><span>${fD.format(p.start)} ${fH.format(p.start)} <u>· ${fT.format(p.start)}</u></span>
+      <button data-rm="${i}" title="${p.gone?'استرجاع':'حذف'}">${p.gone?'↺':'×'}</button></div>`).join('');
+    $('nPrev').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{
+      PREV[+b.dataset.rm].gone=!PREV[+b.dataset.rm].gone;paintPrev()});
+  }
+  $('nT').oninput=()=>{if(!$('nG').dataset.touched)
+    $('nG').value=uniqueSlug(slugify($('nT').value),SE.map(x=>x.slug))};
+  $('nG').oninput=()=>{$('nG').dataset.touched='1'};
+  $('nTy').onchange=typeUI;typeUI();
+  ['nD','nTm','nR','nC'].forEach(i=>$(i).oninput=regen);
+  $('nSave').onclick=()=>{
+    const title=$('nT').value.trim(),ty=document.querySelector('[name=nty]:checked').value;
+    const link=$('nLk').value.trim(),keep=PREV.filter(p=>!p.gone);
+    if(!title)return toast('عنوان اللقاء مطلوب');
+    const g=($('nG').value.trim()||uniqueSlug(slugify(title),SE.map(x=>x.slug))).toLowerCase();
+    if(!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(g))return toast('الرابط: حروف لاتينية صغيرة وشُرَط فقط');
+    if(SE.some(x=>x.slug===g))return toast('هذا الرابط مستخدم لسلسلة أخرى');
+    if(!keep.length)return toast('لم يبقَ أي موعد');
+    if(ty!=='onsite'&&!link)return toast('لقاء غير حضوري يلزمه رابط دخول');
+    const pl=$('nPl').value.trim();
+    const s={id:uid(),title,slug:g,book:$('nB').value.trim(),sh:$('nS').value,type:ty,dur:+$('nDu').value||90,
+      place:(ty!=='remote'&&pl&&pl!==CFG.place)?pl:null,map:null,link:ty!=='onsite'?link:null};
+    SE.push(s);
+    keep.forEach((p,i)=>LE.push({id:uid(),se:s.id,ord:i+1,start:p.start,dur:null,type:null,place:null,link:null,off:false}));
+    LE.sort((a,b)=>a.start-b.start);dlg.close();go('lec');toast(`أُنشئت السلسلة بـ${ar(keep.length)} لقاء`);
+  };
+  dlg.showModal();
+}
+
+/* ============ تبويب: المشايخ ============ */
+function vShk(){
+  document.getElementById('t-shk').innerHTML=`
+  <div class="head"><div><h2>المشايخ</h2><p>لكل شيخ صفحة برابط ثابت · الشيخ لا يُحذف بل يُخفى</p></div>
+    <button class="btn p" data-act="newshk">＋ شيخ جديد</button></div>
+  <div class="panel"><div class="tblwrap"><table>
+    <thead><tr><th>الاسم</th><th>رابط صفحته</th><th>السلاسل</th><th>الحالة</th><th></th></tr></thead>
+    <tbody>${SH.map(x=>{const n=SE.filter(s=>s.sh===x.id).length;return `<tr>
+      <td class="tt">${esc(x.name)}</td>
+      <td dir="ltr" style="font-family:ui-monospace,monospace;font-size:12.5px;color:var(--brown)">/sheikh/${x.slug}</td>
+      <td style="font-weight:800">${ar(n)}</td>
+      <td><span class="chip ${x.active?'act':'ina'}">${x.active?'نشط':'غير نشط'}</span></td>
+      <td><button class="btn g sm" data-tog="${x.id}">${x.active?'إخفاء':'تنشيط'}</button></td></tr>`}).join('')}
+    </tbody></table></div></div>`;
+  document.querySelectorAll('[data-tog]').forEach(b=>b.onclick=()=>{
+    const x=shk(b.dataset.tog);x.active=!x.active;vShk();
+    toast(x.active?'صار نشطاً':'أُخفي — ولقاءاته السابقة باقية')});
+}
+function newShk(){
+  document.getElementById('dlgT').textContent='شيخ جديد';
+  document.getElementById('dlgB').innerHTML=`
+  <div class="f"><label>الاسم كما يظهر للزائر</label><input type="text" id="sN" placeholder="الشيخ عبدالله المحمد"></div>
+  <div class="f" style="margin-top:14px"><label>رابط صفحته</label>
+    <input type="text" id="sG" placeholder="abdullah-almohammed" dir="ltr">
+    <p class="hint">حروف لاتينية صغيرة وشُرَط فقط · لا يُغيَّر بعد إرساله للشيخ</p></div>
+  <div class="bar2"><button class="btn g" data-close>إلغاء</button><button class="btn p" id="sSave">إضافة</button></div>`;
+  document.getElementById('sSave').onclick=()=>{
+    const n=document.getElementById('sN').value.trim(),g=document.getElementById('sG').value.trim().toLowerCase();
+    if(!n)return toast('الاسم مطلوب');
+    if(!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(g))return toast('الرابط: حروف لاتينية صغيرة وشُرَط فقط');
+    if(SH.some(x=>x.slug===g))return toast('هذا الرابط مستخدم لشيخ آخر');
+    SH.push({id:uid(),name:n,slug:g,active:true});dlg.close();vShk();toast('أُضيف الشيخ');
+  };
+  dlg.showModal();
+}
+
+/* ============ تبويب: الإعدادات ============ */
+function vSet(){
+  document.getElementById('t-set').innerHTML=`
+  <div class="head"><div><h2>الإعدادات</h2><p>قيم تُكتب مرة وتسري على كل اللقاءات</p></div></div>
+  <div class="panel"><div class="ph2">شعار الجمعية</div><div class="pb">
+    <div class="drop" id="drop">
+      <div class="dprev" id="dprev">${CFG.logo?`<img src="${CFG.logo}" alt="الشعار">`:'<span>لا شعار بعد</span>'}</div>
+      <div class="dtxt">
+        <b>اسحب ملف الشعار هنا أو اخترْه</b>
+        <p class="hint">PNG أو SVG بخلفية شفافة · العرض المناسب ٣٠٠–٦٠٠ بكسل · حتى ٢ ميجابايت</p>
+        <div style="display:flex;gap:8px;margin-top:11px;flex-wrap:wrap">
+          <button class="btn g sm" id="pick">اختيار ملف</button>
+          ${CFG.logo?'<button class="btn d sm" id="rmlogo">إزالة</button>':''}
+        </div>
+      </div>
+      <input type="file" id="file" accept="image/png,image/svg+xml,image/jpeg,image/webp" hidden>
+    </div>
+    <p class="hint" style="margin-top:12px">يُرفع إلى مخزن المشروع ويظهر في الترويسة فوراً — بلا إعادة نشر.</p>
+  </div></div>
+  <div class="panel"><div class="ph2">المقر الافتراضي</div><div class="pb">
+    <div class="grid2">
+      <div class="f"><label>اسم المكان</label><input type="text" id="cP" value="${esc(CFG.place)}"></div>
+      <div class="f"><label>رابط الموقع على الخرائط</label><input type="url" id="cM" value="${esc(CFG.map)}" dir="ltr"></div>
+    </div>
+    <p class="hint">يُعبَّأ تلقائياً في كل سلسلة حضورية — وتغييره هنا يسري على كل اللقاءات التي لم يُكتب لها مكان خاص.</p>
+    <div class="f" style="margin-top:16px;max-width:220px"><label>المدة الافتراضية للقاء (دقيقة)</label>
+      <input type="number" id="cD" value="${CFG.dur}" min="5" max="600"></div>
+    <div class="bar2"><button class="btn p" id="cSave">حفظ الإعدادات</button></div>
+  </div></div>
+  <div class="panel"><div class="ph2">ثوابت لا تُعدَّل</div><div class="pb">
+    <div class="grid2">
+      <div class="f"><label>المنطقة الزمنية</label><input type="text" value="توقيت السعودية (Asia/Riyadh)" disabled></div>
+      <div class="f"><label>تقويم العرض</label><input type="text" value="هجري — أم القرى" disabled></div>
+    </div>
+    <p class="hint">التواريخ تُدخَل وتُخزَّن ميلادياً وتُعرض للزائر هجرياً. كلمة مرور اللوحة تُغيَّر من إعدادات Vercel لا من هنا.</p>
+  </div></div>`;
+  const drop=document.getElementById('drop'),file=document.getElementById('file');
+  document.getElementById('pick').onclick=()=>file.click();
+  const rm=document.getElementById('rmlogo');
+  if(rm)rm.onclick=()=>{CFG.logo=null;vSet();paintLogo();toast('أُزيل الشعار')};
+  function take(f){
+    if(!f)return;
+    if(!/^image\/(png|svg\+xml|jpeg|webp)$/.test(f.type))return toast('الملف يجب أن يكون صورة PNG أو SVG');
+    if(f.size>2*1024*1024)return toast('حجم الملف يتجاوز ٢ ميجابايت');
+    const r=new FileReader();
+    r.onload=()=>{CFG.logo=r.result;vSet();paintLogo();toast('رُفع الشعار')};
+    r.readAsDataURL(f);
+  }
+  file.onchange=e=>take(e.target.files[0]);
+  ['dragenter','dragover'].forEach(v=>drop.addEventListener(v,e=>{e.preventDefault();drop.classList.add('over')}));
+  ['dragleave','drop'].forEach(v=>drop.addEventListener(v,e=>{e.preventDefault();drop.classList.remove('over')}));
+  drop.addEventListener('drop',e=>take(e.dataTransfer.files[0]));
+  document.getElementById('cSave').onclick=()=>{
+    CFG.place=document.getElementById('cP').value.trim()||CFG.place;
+    CFG.map=document.getElementById('cM').value.trim();
+    CFG.dur=+document.getElementById('cD').value||90;
+    toast('حُفظت الإعدادات');vSet();
+  };
+}
+
+/* ============ ربط ============ */
+const dlg=document.getElementById('dlg');
+document.getElementById('dlgX').onclick=()=>dlg.close();
+document.addEventListener('click',e=>{
+  if(e.target.closest('[data-close]'))return dlg.close();
+  const a=e.target.closest('[data-act]');
+  if(a){({newser:newSer,newshk:newShk})[a.dataset.act]();return}
+  const cp=e.target.closest('[data-copy]');
+  if(cp){navigator.clipboard?.writeText(location.origin+cp.dataset.copy);toast('نُسخ الرابط');return}
+  const ed=e.target.closest('[data-edit]');
+  if(ed)editLec(ed.dataset.edit);
+});
+function paintLogo(){
+  const b=document.querySelector('.logo');
+  b.innerHTML=CFG.logo?`<img src="${CFG.logo}" alt="شعار الجمعية">`
+    :`<span class="ph" style="display:grid">الشعار</span>`;
+}
+paintNav();paintLogo();vLec();
+</script>
+</body>
+</html>

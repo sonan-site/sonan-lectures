@@ -1,0 +1,36 @@
+# أسرار — لا تُرفع أبداً
+.env
+.env.local
+.env*.local
+# ونسخ Notepad المشوّهة الاسم (env.local.txt وأمثالها) — تحوي المفاتيح نفسها
+*env*.txt
+env.local*
+
+# تبعيات
+node_modules/
+.pnp
+.pnp.js
+
+# بناء
+.next/
+out/
+build/
+next-env.d.ts
+*.tsbuildinfo
+
+# نشر
+.vercel
+
+# نظام التشغيل والمحرّرات
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.idea/
+.vscode/
+
+# سجلّات
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log

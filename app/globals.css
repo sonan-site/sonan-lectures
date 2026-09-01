@@ -1,0 +1,222 @@
+@import 'tailwindcss';
+
+/*
+  Tailwind v4 يمسح ملفات المشروع تلقائياً ليولّد الأدوات المستعملة.
+  ومجلد `prototype/` نماذج HTML مرجعية لا تُشحن — لكن مسحها يولّد أدوات شبح:
+  ‏.grid و .table و .hidden و .block و .visible و .filter (من `LX.filter(` في شيفرة النموذج).
+  وهذه أسماء أصناف مستعملة فعلاً في النموذج المعتمد — `.grid` شبكة التقويم —
+  فيصير حذف مجلد النماذج لاحقاً كافياً لتغيير الـCSS المُخرَج بلا تعديل سطر كود.
+*/
+@source not "prototype/**";
+
+/* =============================================================
+   ألوان هوية جمعية سنن — القسم ٣ من تعليمة البناء. لا تُغيَّر.
+   تُعرَّف هنا مرة واحدة، فتصير متاحة بوجهين:
+     · أدوات Tailwind:  bg-petrol · text-brown · border-line
+     · متغيّرات CSS:     var(--petrol) — بالأسماء نفسها التي في النموذجين
+   ============================================================= */
+@theme {
+  --color-petrol: #2a3f46;
+  --color-petrol-deep: #1c2c32;
+  --color-petrol-soft: #3c555e;
+  --color-brown: #7d7168;
+  --color-warm: #8c847d;
+  --color-beige: #f3efe9;
+  --color-paper: #fcfaf7;
+  --color-line: #e2dcd3;
+  --color-live: #c2452d;
+  --color-cancel: #6e3b33;
+  --color-ok: #3f6b57;
+
+  --font-sans: var(--font-tajawal), system-ui, sans-serif;
+}
+
+/* الأسماء المختصرة كما وردت في النموذجين المعتمدين، حتى تُنقل أنماطهما حرفياً */
+:root {
+  --petrol: var(--color-petrol);
+  --petrol-deep: var(--color-petrol-deep);
+  --petrol-soft: var(--color-petrol-soft);
+  --brown: var(--color-brown);
+  --warm: var(--color-warm);
+  --beige: var(--color-beige);
+  --paper: var(--color-paper);
+  --line: var(--color-line);
+  --live: var(--color-live);
+  --cancel: var(--color-cancel);
+  --ok: var(--color-ok);
+  --r: 10px;
+}
+
+/* ---------- التصفير ---------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body {
+  max-width: 100%;
+}
+
+body {
+  font-family: var(--font-tajawal), 'Tajawal', system-ui, sans-serif;
+  background: var(--beige);
+  color: var(--petrol);
+  line-height: 1.6;
+  font-size: 16px;
+  overflow-x: hidden;
+}
+
+/*
+  إبطال أثر جانبي لـ Tailwind preflight.
+
+  preflight يضبط `button, input, select, textarea { font: inherit }`، و`font`
+  اختصارٌ يشمل `line-height` — فترث عناصر النموذج ١٫٦ من `body`، بينما النموذج
+  المعتمد (بلا Tailwind) يتركها على `normal` الافتراضي في المتصفح.
+
+  الأثر مقيس لا مقدَّر: `.tab` يرتفع من ٣٧٫٠٠ إلى ٣٩٫١٩ بكسل، والشريط اللاصق
+  `.bar` من ٢٠٣ إلى ٢٠٦٫٧٨ — وينسحب على كل زرّ لا يحدّد ارتفاع سطره:
+  البطاقات وخلايا التقويم وأزرار التصفية.
+
+  فإعادة `normal` ليست انحرافاً عن النموذج بل إبطالٌ لانحراف أحدثه preflight.
+*/
+button,
+input,
+select,
+textarea {
+  line-height: normal;
+}
+
+/* حلقة تركيز واحدة في المنصة كلها — للوحة المفاتيح */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2.5px solid var(--brown);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* =============================================================
+   صفحتا الفشل — القسم ٧
+   تعيشان في جذر app/ خارج مجموعة الزائر، فأنماطهما هنا لا في
+   visitor.css. لغة بصرية واحدة مع النموذج المعتمد: بيج وبترولي
+   وبطاقة بيضاء بحدّ رفيع.
+   ============================================================= */
+.failpage {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 40px 20px;
+  background: var(--beige);
+}
+
+.failcard {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 40px 28px 34px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+}
+
+.failmark {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background: var(--beige);
+  display: grid;
+  place-items: center;
+}
+
+.failmark svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: var(--brown);
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.failcard h1 {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  line-height: 1.35;
+}
+
+.failcard p {
+  margin-top: 10px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--warm);
+  line-height: 1.75;
+}
+
+.failacts {
+  display: flex;
+  gap: 9px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.failbtn {
+  border: 0;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 20px;
+  border-radius: 9px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.failbtn.p {
+  background: var(--petrol);
+  color: #fff;
+}
+
+.failbtn.p:hover {
+  background: var(--petrol-deep);
+}
+
+.failbtn.g {
+  background: #fff;
+  color: var(--brown);
+  border: 1px solid var(--line);
+}
+
+.failbtn.g:hover {
+  border-color: var(--brown);
+}
+
+.faildigest {
+  display: block;
+  margin-top: 20px;
+  font-family: ui-monospace, monospace;
+  font-size: 11.5px;
+  color: #b8afa5;
+  direction: ltr;
+}
