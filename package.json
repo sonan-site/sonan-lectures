@@ -12,7 +12,8 @@
     "env:anon": "node scripts/set-env.mjs NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "env:secret": "node scripts/set-env.mjs SUPABASE_SERVICE_ROLE_KEY",
     "env:password": "node scripts/set-env.mjs ADMIN_PASSWORD",
-    "accept": "node scripts/acceptance.mjs"
+    "accept": "node scripts/acceptance.mjs",
+    "check:delete": "node scripts/check-delete.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

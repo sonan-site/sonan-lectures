@@ -19,6 +19,14 @@ import type { LectureType } from '@/lib/types'
  * سلسلته. فالمشرف الذي يمسح حقل المدة لا يُلغي المدة، بل يعيد اللقاء إلى
  * مدّة سلسلته.
  *
+ * وفي هذا الملف ثلاثة أفعال:
+ *   · `PATCH` بحقول النموذج ⇐ تعديل.
+ *   · `PATCH` بـ`action: 'archive' | 'restore'` ⇐ إخفاء عن الزائر واسترجاع.
+ *   · `DELETE` ⇐ حذف نهائيّ وإعادة ترقيم.
+ *
+ * **ثلاث حالات لا تُخلَط:** «ملغى» يبقى ظاهراً للزائر مشطوباً وعدّاده متوقّف
+ * (القاعدة ٦.٧ محفوظة)، و«مؤرشف» يختفي تماماً ويُسترجَع، و«محذوف» لا يعود.
+ *
  * القاعدة ٦.٥: الكتابة بمفتاح الخدمة بعد فحص كوكي المشرف، لا من المتصفح.
  */
 
@@ -44,6 +52,25 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     body = (await request.json()) as Record<string, unknown>
   } catch {
     return fail('طلب غير صالح.')
+  }
+
+  // مسار الأرشفة: لا يمسّ حقلاً آخر، فلا يحتاج نموذجاً كاملاً ولا فحص وراثة
+  if (body.action === 'archive' || body.action === 'restore') {
+    const archive = body.action === 'archive'
+    const { data, error } = await supabaseAdmin
+      .from('lectures')
+      .update({ archived_at: archive ? new Date().toISOString() : null })
+      .eq('id', id)
+      .select('id, ord')
+      .maybeSingle()
+
+    if (error) return fail('تعذّر حفظ التغيير. حاول مرة أخرى.', 503)
+    if (!data) return fail('لا يوجد لقاء بهذا المعرّف.', 404)
+
+    return NextResponse.json({
+      ok: true,
+      message: archive ? 'أُرشف اللقاء — اختفى عن الزائر وبقي هنا' : 'عاد اللقاء إلى الظهور',
+    })
   }
 
   let patch: {
@@ -103,4 +130,49 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   return NextResponse.json({ ok: true })
+}
+
+/**
+ * حذف نهائيّ للقاء، وإعادة ترقيم ما بعده.
+ *
+ * ينفّذه `admin_delete_lecture` في قاعدة البيانات لا هنا، لسببين:
+ *   · القيد `lectures_ord_unique (series_id, ord)` غير مؤجَّل، فإعادة
+ *     الترقيم بمرور واحد تصطدم بصفٍّ قائم. الدالّة تفعلها بمرورين داخل
+ *     معاملة واحدة، فلا تُرى حالة وسيطة ولا تبقى فجوة (معيار القبول ١١).
+ *   · تقفل صفّ السلسلة، فحذفان متزامنان لا يتشابكان على الترتيب نفسه.
+ *
+ * ⚠️ وتُبقي ترتيبك القائم ولا تُعيد حسابه بالتاريخ: لقاءٌ أجّلتَه قد يكون
+ *    ترتيبه غير زمني عمداً، وإعادة الترقيم بالموعد كانت ستُبدّله من تلقائها.
+ */
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const denied = await requireAdmin()
+  if (denied) return denied
+
+  const { id } = await params
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return fail('معرّف اللقاء غير صالح.')
+  }
+
+  const { data, error } = await supabaseAdmin.rpc('admin_delete_lecture', { p_lecture_id: id })
+
+  if (error) {
+    const msg = error.message ?? ''
+    if (msg.includes('lecture_not_found')) return fail('لا يوجد لقاء بهذا المعرّف.', 404)
+    if (msg.includes('ord_window_exhausted')) {
+      return fail('تعذّرت إعادة ترقيم السلسلة. راجع ترتيب لقاءاتها.', 409)
+    }
+    return fail('تعذّر حذف اللقاء. حاول مرة أخرى.', 503)
+  }
+
+  const row = (data as { out_remaining: number }[] | null)?.[0]
+  const remaining = row?.out_remaining ?? 0
+
+  return NextResponse.json({
+    ok: true,
+    remaining,
+    message:
+      remaining === 0
+        ? 'حُذف اللقاء — ولم يبقَ في السلسلة لقاء'
+        : `حُذف اللقاء وأُعيد ترقيم ما بعده (${remaining} باقياً)`,
+  })
 }
