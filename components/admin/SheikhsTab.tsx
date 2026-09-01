@@ -2,15 +2,18 @@
 
 import { useState } from 'react'
 import type { AdminSheikhVM } from '@/lib/admin-queries'
+import { ConfirmDialog, callOrThrow } from './ConfirmDialog'
 
 /**
  * تبويب المشايخ — منقول من `vShk()` في النموذج المعتمد.
  *
- * الاسم · رابط الصفحة · عدد السلاسل · مفتاح نشط/غير نشط.
+ * الاسم · رابط الصفحة · عدد السلاسل · مفتاح نشط/غير نشط · حذف القالب.
  *
- * **لا زرّ حذف إطلاقاً** (القسم ٥ والقاعدة ٦.٦): الشيخ يُخفى ولا يُحذف،
- * والقيد `on delete restrict` في المخطط يمنع الحذف أصلاً. والإخفاء يُخرجه
- * من قائمة اختيار السلسلة ومن تصفية الزائر، وتبقى لقاءاته في «السابقة».
+ * **الحذف نقض صريح لنصّ القسم ٥ والقاعدة ٦.٦** — أُضيف بعد هجرة ٠٠٢
+ * وموافقة صاحب المشروع الصريحة. لكنه يحفظ غرض القاعدة الأصلي أتمَّ ممّا
+ * كانت تفعله: هذا الجدول صار **قائمة قوالب**، والاسم والرابط نُسخا لقطةً
+ * داخل كل سلسلة عند إنشائها. فحذف القالب هنا لا يمسّ سلسلة ولا لقاءً ولا
+ * حتى الرابط العام `/sheikh/<slug>` — تشهد له نافذة التأكيد بالعدد.
  */
 export function SheikhsTab({
   sheikhs,
@@ -23,6 +26,7 @@ export function SheikhsTab({
 }) {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [toDelete, setToDelete] = useState<AdminSheikhVM | null>(null)
 
   async function toggle(s: AdminSheikhVM) {
     if (busyId) return
@@ -54,7 +58,7 @@ export function SheikhsTab({
       <div className="head">
         <div>
           <h2>المشايخ</h2>
-          <p>لكل شيخ صفحة برابط ثابت · الشيخ لا يُحذف بل يُخفى</p>
+          <p>لكل شيخ صفحة برابط ثابت · هذه قائمة قوالب — حذف القالب لا يمسّ سلاسله</p>
         </div>
         <button className="btn p" onClick={onNewSheikh}>
           ＋ شيخ جديد
@@ -77,6 +81,7 @@ export function SheikhsTab({
                   <th>رابط صفحته</th>
                   <th>السلاسل</th>
                   <th>الحالة</th>
+                  <th />
                   <th />
                 </tr>
               </thead>
@@ -109,12 +114,57 @@ export function SheikhsTab({
                         {busyId === s.id ? '…' : s.isActive ? 'إخفاء' : 'تنشيط'}
                       </button>
                     </td>
+                    <td>
+                      <button
+                        className="btn d sm"
+                        disabled={busyId === s.id}
+                        onClick={() => setToDelete(s)}
+                      >
+                        حذف
+                      </button>
+                    </td>
                   </tr>
                 ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      <ConfirmDialog
+        title="حذف قالب الشيخ"
+        confirmLabel="حذف القالب"
+        danger
+        open={toDelete !== null}
+        onClose={() => setToDelete(null)}
+        onConfirm={async () => {
+          if (!toDelete) return
+          const data = await callOrThrow(
+            `/api/admin/sheikhs/${toDelete.id}?expect=${toDelete.seriesCount}`,
+            { method: 'DELETE' }
+          )
+          setToDelete(null)
+          onDone(data.message ?? 'حُذف القالب')
+        }}
+        body={
+          toDelete ? (
+            <>
+              حذف قالب <b>«{toDelete.name}»</b> من قائمة المشايخ نهائياً.
+              {toDelete.seriesCount > 0 ? (
+                <>
+                  {' '}
+                  له <b>{toDelete.seriesCountAr}</b> سلسلة — تبقى كاملةً باسمه ورابطه، ويبقى رابطه
+                  العام <code dir="ltr">/sheikh/{toDelete.slug}</code> عاملاً.
+                </>
+              ) : (
+                <> لا سلاسل له، فلا يتأثّر شيء آخر.</>
+              )}
+              <br />
+              <br />
+              هذا يزيله من قائمة اختيار الشيخ عند إنشاء سلسلة جديدة فقط.
+            </>
+          ) : null
+        }
+      />
     </>
   )
 }

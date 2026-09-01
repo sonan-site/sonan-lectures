@@ -3,16 +3,23 @@
 import { useState } from 'react'
 import { arNum } from '@/lib/datetime'
 import type { AdminLectureVM, AdminSeriesVM } from '@/lib/admin-queries'
+import { ConfirmDialog, callOrThrow } from './ConfirmDialog'
 
 /**
  * تبويب اللقاءات — منقول من `vLec()` في النموذج المعتمد.
  *
- * جدول بتصفية (السلسلة · قادم/سابق)، وزرّ «تعديل» لكل لقاء.
- * واللقاء الذي خرج عن سلسلته يُوسم بـ«مختلف عن السلسلة».
+ * جدول بتصفية (السلسلة · قادم/سابق)، وأزرار «تعديل» و«أرشفة» و«حذف»
+ * لكل لقاء. واللقاء الذي خرج عن سلسلته يُوسم بـ«مختلف عن السلسلة».
  *
- * الحالة تأتي من `v_lectures` ولا تُحسب هنا (القاعدة ٦.١). وما يُقرَّر محلياً
- * هو **الوعاء** وحده: هل يظهر تحت «القادمة» أم «السابقة» — واللقاء الملغى
- * حالته `cancelled` سواء كان موعده غداً أو قبل شهر، فيُرجَع إلى موعده.
+ * الحالة تأتي من `v_lectures_admin` ولا تُحسب هنا (القاعدة ٦.١). وما يُقرَّر
+ * محلياً هو **الوعاء** وحده: هل يظهر تحت «القادمة» أم «السابقة» — واللقاء
+ * الملغى حالته `cancelled` سواء كان موعده غداً أو قبل شهر، فيُرجَع إلى موعده.
+ *
+ * ⚠️ **ثلاث حالات لا تُخلَط** (أُضيفت بعد هجرة ٠٠٢):
+ *   · ملغى — يبقى ظاهراً للزائر مشطوباً وعدّاده متوقّف (القاعدة ٦.٧ كما هي).
+ *   · مؤرشف — يختفي عن الزائر تماماً، ويُسترجَع بضغطة.
+ *   · محذوف — نهائيّ، وتُعاد ترقيم ما بعده تلقائياً.
+ * والمؤرشف مخفيّ افتراضاً في هذا الجدول أيضاً؛ مفتاح «إظهار المؤرشف» يكشفه.
  */
 
 /** صنف شارة الحالة كما في النموذج: الملغى والجارِي بالأحمر، وما عداهما محايد */
@@ -29,15 +36,21 @@ export function LecturesTab({
   serverNow,
   onEdit,
   onNewSeries,
+  onDone,
 }: {
   lectures: AdminLectureVM[]
   series: AdminSeriesVM[]
   serverNow: number
   onEdit: (id: string) => void
   onNewSeries: () => void
+  onDone: (message: string) => void
 }) {
   const [seriesId, setSeriesId] = useState('')
   const [when, setWhen] = useState<'up' | 'past'>('up')
+  const [showArchived, setShowArchived] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [toDelete, setToDelete] = useState<AdminLectureVM | null>(null)
 
   const isUpcoming = (l: AdminLectureVM) =>
     l.status === 'upcoming' || l.status === 'live'
@@ -46,10 +59,31 @@ export function LecturesTab({
         ? l.startsAtMs > serverNow
         : false
 
+  const archivedCount = lectures.filter((l) => l.isArchived || l.seriesArchived).length
+
   const list = lectures
     .filter((l) => (seriesId ? l.seriesId === seriesId : true))
     .filter((l) => (when === 'up' ? isUpcoming(l) : !isUpcoming(l)))
+    .filter((l) => showArchived || (!l.isArchived && !l.seriesArchived))
     .sort((a, b) => (when === 'up' ? a.startsAtMs - b.startsAtMs : b.startsAtMs - a.startsAtMs))
+
+  async function toggleArchive(l: AdminLectureVM) {
+    if (busyId) return
+    setBusyId(l.id)
+    setError(null)
+    try {
+      const data = await callOrThrow(`/api/admin/lectures/${l.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: l.isArchived ? 'restore' : 'archive' }),
+      })
+      onDone(data.message ?? 'حُفظ التغيير')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذّر حفظ التغيير.')
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   return (
     <>
@@ -66,10 +100,26 @@ export function LecturesTab({
         </button>
       </div>
 
+      {error ? (
+        <p className="loginerr" role="alert">
+          {error}
+        </p>
+      ) : null}
+
       <div className="panel">
         <div className="ph2">
           <span>قائمة اللقاءات</span>
           <span className="filters">
+            {archivedCount > 0 ? (
+              <label className="sw">
+                <input
+                  type="checkbox"
+                  checked={showArchived}
+                  onChange={(e) => setShowArchived(e.target.checked)}
+                />
+                إظهار المؤرشف ({arNum(archivedCount)})
+              </label>
+            ) : null}
             <select
               aria-label="تصفية بالسلسلة"
               value={seriesId}
@@ -111,6 +161,8 @@ export function LecturesTab({
                   <th>النوع</th>
                   <th>الحالة</th>
                   <th />
+                  <th />
+                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -123,6 +175,11 @@ export function LecturesTab({
                       {l.isOverridden ? (
                         <span className="chip ov" style={{ marginTop: 4 }}>
                           مختلف عن السلسلة
+                        </span>
+                      ) : null}
+                      {l.isArchived || l.seriesArchived ? (
+                        <span className="chip ina" style={{ marginTop: 4 }}>
+                          {l.seriesArchived && !l.isArchived ? 'سلسلته مؤرشفة' : 'مؤرشف'}
                         </span>
                       ) : null}
                     </td>
@@ -147,6 +204,25 @@ export function LecturesTab({
                         تعديل
                       </button>
                     </td>
+                    <td>
+                      <button
+                        className="btn g sm"
+                        disabled={busyId === l.id || l.seriesArchived}
+                        title={l.seriesArchived ? 'أرشِف اللقاء من تبويب السلاسل' : undefined}
+                        onClick={() => toggleArchive(l)}
+                      >
+                        {busyId === l.id ? '…' : l.isArchived ? 'استرجاع' : 'أرشفة'}
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        className="btn d sm"
+                        disabled={busyId === l.id}
+                        onClick={() => setToDelete(l)}
+                      >
+                        حذف
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -154,6 +230,33 @@ export function LecturesTab({
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        title="حذف اللقاء نهائياً"
+        confirmLabel="حذف اللقاء"
+        danger
+        open={toDelete !== null}
+        onClose={() => setToDelete(null)}
+        onConfirm={async () => {
+          if (!toDelete) return
+          const data = await callOrThrow(`/api/admin/lectures/${toDelete.id}`, {
+            method: 'DELETE',
+          })
+          setToDelete(null)
+          onDone(data.message ?? 'حُذف اللقاء')
+        }}
+        body={
+          toDelete ? (
+            <>
+              حذف اللقاء رقم <b>{toDelete.ordAr}</b> من <b>«{toDelete.seriesTitle}»</b> — بموعد{' '}
+              {toDelete.hijri}. لا رجعة فيه، وسيُعاد ترقيم ما بعده تلقائياً.
+              <br />
+              <br />
+              إن كان الغرض إخفاءه فقط وتبقى قابلاً للاسترجاع، استعمل «أرشفة» بدلاً من الحذف.
+            </>
+          ) : null
+        }
+      />
     </>
   )
 }

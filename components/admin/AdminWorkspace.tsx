@@ -52,6 +52,7 @@ export function AdminWorkspace({ data, serverNow }: { data: AdminData; serverNow
         serverNow={serverNow}
         onEdit={setEditId}
         onNewSeries={() => setNewSeries(true)}
+        onDone={done}
       />
     ),
     ser: (
@@ -59,6 +60,7 @@ export function AdminWorkspace({ data, serverNow }: { data: AdminData; serverNow
         series={data.series}
         onNewSeries={() => setNewSeries(true)}
         onCopied={setToast}
+        onDone={done}
       />
     ),
     shk: (
