@@ -73,6 +73,12 @@ main{padding:24px 0 60px}
 
 .panel+.panel{margin-top:16px}
 
+/* الجدول يمرَّر أفقياً داخل غلافه دائماً، لا الشاشة الضيقة وحدها — سبعة
+   أعمدة أو ثمانية (بعد عمود «إجراءات») أعرض من كثير من الشاشات المتوسطة
+   أيضاً. غياب هذا السطر كان يجعل .panel{overflow:hidden} يقتصّ الأعمدة
+   الأخيرة بصمت بدل أن يمرّرها المستخدم. */
+.tblwrap{overflow-x:auto}
+
 .ph2{padding:15px 18px;border-bottom:1px solid var(--line);background:var(--paper);font-size:14.5px;font-weight:800;display:flex;justify-content:space-between;align-items:center;gap:12px}
 
 .pb{padding:18px}
@@ -228,7 +234,6 @@ dialog::backdrop{background:rgba(28,44,50,.6)}
   .top .wrap{padding:12px 14px}
   .head h2{font-size:18.5px}
   .toast{bottom:86px}.toast.on{bottom:94px}
-  .tblwrap{overflow-x:auto}
   .bar2{justify-content:stretch}
   .bar2 .btn{flex:1;justify-content:center}
 }
