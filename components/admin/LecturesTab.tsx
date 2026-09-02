@@ -4,7 +4,14 @@ import { useState } from 'react'
 import { arNum } from '@/lib/datetime'
 import type { AdminLectureVM, AdminSeriesVM } from '@/lib/admin-queries'
 import { ConfirmDialog, callOrThrow } from './ConfirmDialog'
-import { ArchiveIcon, DeleteIcon, EditIcon, RestoreIcon } from './ActionIcons'
+import {
+  ArchiveIcon,
+  CalendarIcon,
+  DeleteIcon,
+  EditIcon,
+  PersonIcon,
+  RestoreIcon,
+} from './ActionIcons'
 
 /**
  * تبويب اللقاءات — منقول من `vLec()` في النموذج المعتمد.
@@ -21,6 +28,13 @@ import { ArchiveIcon, DeleteIcon, EditIcon, RestoreIcon } from './ActionIcons'
  *   · مؤرشف — يختفي عن الزائر تماماً، ويُسترجَع بضغطة.
  *   · محذوف — نهائيّ، وتُعاد ترقيم ما بعده تلقائياً.
  * والمؤرشف مخفيّ افتراضاً في هذا الجدول أيضاً؛ مفتاح «إظهار المؤرشف» يكشفه.
+ *
+ * ⚠️ **دون ٨٢٠px يتحوّل الجدول إلى بطاقات** (`.lec-cards`)، لا يُمرَّر أفقياً.
+ * القرار على مسوَّدة Artifact قارنت بديلَين — بطاقات مقابل عمود مثبَّت — واعتُمدت
+ * البطاقات لأن الجدول المزدحم بثمانية أعمدة كان يحتاج تمريراً أفقياً على أي
+ * عرض، وهذا نمط "تطبيق ويب" لا تطبيق مثبَّت. البطاقة والجدول يُصيَّران معاً
+ * دائماً وCSS تختار الظاهر منهما — القياس بجافاسكربت كان يُنتج اختلافاً بين
+ * تصيير الخادم وأول تصيير في المتصفح.
  */
 
 /** صنف شارة الحالة كما في النموذج: الملغى والجارِي بالأحمر، وما عداهما محايد */
@@ -86,6 +100,61 @@ export function LecturesTab({
     }
   }
 
+  /** أزرار الإجراءات — مصدر واحد، يُستعمل في الجدول والبطاقة معاً */
+  function Actions({ l }: { l: AdminLectureVM }) {
+    return (
+      <>
+        <button
+          className="btn g icon"
+          title="تعديل"
+          aria-label="تعديل"
+          onClick={() => onEdit(l.id)}
+        >
+          <EditIcon />
+        </button>
+        <button
+          className="btn g icon"
+          disabled={busyId === l.id || l.seriesArchived}
+          title={
+            l.seriesArchived
+              ? 'أرشِف اللقاء من تبويب السلاسل'
+              : l.isArchived
+                ? 'استرجاع'
+                : 'أرشفة'
+          }
+          aria-label={l.isArchived ? 'استرجاع' : 'أرشفة'}
+          onClick={() => toggleArchive(l)}
+        >
+          {l.isArchived ? <RestoreIcon /> : <ArchiveIcon />}
+        </button>
+        <button
+          className="btn d icon"
+          disabled={busyId === l.id}
+          title="حذف"
+          aria-label="حذف"
+          onClick={() => setToDelete(l)}
+        >
+          <DeleteIcon />
+        </button>
+      </>
+    )
+  }
+
+  function StatusChips({ l }: { l: AdminLectureVM }) {
+    return (
+      <>
+        <span className={`chip ${l.effTypeClass}`}>{l.effTypeLabel}</span>
+        <span className={`chip ${STATUS_CHIP[l.status] ?? ''}`.trimEnd()}>{l.statusLabel}</span>
+        {l.isOverridden ? <span className="chip ov">مختلف عن السلسلة</span> : null}
+        {l.isArchived || l.seriesArchived ? (
+          <span className="chip ina">
+            {l.seriesArchived && !l.isArchived ? 'سلسلته مؤرشفة' : 'مؤرشف'}
+          </span>
+        ) : null}
+      </>
+    )
+  }
+
   return (
     <>
       <div className="head">
@@ -144,102 +213,114 @@ export function LecturesTab({
           </span>
         </div>
 
-        <div className="tblwrap">
-          {list.length === 0 ? (
+        {list.length === 0 ? (
+          <div className="tblwrap">
             <div className="empty">
               <b>لا لقاءات في هذا العرض</b>
               غيّر التصفية أو أنشئ سلسلة جديدة.
             </div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>الترتيب</th>
-                  <th>اللقاء</th>
-                  <th>الشيخ</th>
-                  <th>الموعد</th>
-                  <th>المدة</th>
-                  <th>النوع</th>
-                  <th>الحالة</th>
-                  <th>إجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.map((l) => (
-                  <tr key={l.id} className={l.isCancelled ? 'off' : ''}>
-                    <td style={{ fontWeight: 800, color: 'var(--brown)' }}>{l.ordAr}</td>
-                    <td>
-                      <span className="tt">{l.seriesTitle}</span>
-                      {l.seriesBook ? <span className="sub">{l.seriesBook}</span> : null}
-                      {l.isOverridden ? (
-                        <span className="chip ov" style={{ marginTop: 4 }}>
-                          مختلف عن السلسلة
-                        </span>
-                      ) : null}
-                      {l.isArchived || l.seriesArchived ? (
-                        <span className="chip ina" style={{ marginTop: 4 }}>
-                          {l.seriesArchived && !l.isArchived ? 'سلسلته مؤرشفة' : 'مؤرشف'}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td>{l.sheikhName}</td>
-                    <td>
-                      {l.hijri}
-                      <span className="sub">
-                        {l.weekdayName} · {l.time}
-                      </span>
-                    </td>
-                    <td>{l.effDurationAr} د</td>
-                    <td>
-                      <span className={`chip ${l.effTypeClass}`}>{l.effTypeLabel}</span>
-                    </td>
-                    <td>
-                      <span className={`chip ${STATUS_CHIP[l.status] ?? ''}`.trimEnd()}>
-                        {l.statusLabel}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="actions">
-                        <button
-                          className="btn g icon"
-                          title="تعديل"
-                          aria-label="تعديل"
-                          onClick={() => onEdit(l.id)}
-                        >
-                          <EditIcon />
-                        </button>
-                        <button
-                          className="btn g icon"
-                          disabled={busyId === l.id || l.seriesArchived}
-                          title={
-                            l.seriesArchived
-                              ? 'أرشِف اللقاء من تبويب السلاسل'
-                              : l.isArchived
-                                ? 'استرجاع'
-                                : 'أرشفة'
-                          }
-                          aria-label={l.isArchived ? 'استرجاع' : 'أرشفة'}
-                          onClick={() => toggleArchive(l)}
-                        >
-                          {l.isArchived ? <RestoreIcon /> : <ArchiveIcon />}
-                        </button>
-                        <button
-                          className="btn d icon"
-                          disabled={busyId === l.id}
-                          title="حذف"
-                          aria-label="حذف"
-                          onClick={() => setToDelete(l)}
-                        >
-                          <DeleteIcon />
-                        </button>
-                      </div>
-                    </td>
+          </div>
+        ) : (
+          <>
+            {/* الجدول — من ٨٢٠px فما فوق */}
+            <div className="tblwrap lec-desktop-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>الترتيب</th>
+                    <th>اللقاء</th>
+                    <th>الشيخ</th>
+                    <th>الموعد</th>
+                    <th>المدة</th>
+                    <th>النوع</th>
+                    <th>الحالة</th>
+                    <th>إجراءات</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+                </thead>
+                <tbody>
+                  {list.map((l) => (
+                    <tr key={l.id} className={l.isCancelled ? 'off' : ''}>
+                      <td style={{ fontWeight: 800, color: 'var(--brown)' }}>{l.ordAr}</td>
+                      <td>
+                        <span className="tt">{l.seriesTitle}</span>
+                        {l.seriesBook ? <span className="sub">{l.seriesBook}</span> : null}
+                        {l.isOverridden ? (
+                          <span className="chip ov" style={{ marginTop: 4 }}>
+                            مختلف عن السلسلة
+                          </span>
+                        ) : null}
+                        {l.isArchived || l.seriesArchived ? (
+                          <span className="chip ina" style={{ marginTop: 4 }}>
+                            {l.seriesArchived && !l.isArchived ? 'سلسلته مؤرشفة' : 'مؤرشف'}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td>{l.sheikhName}</td>
+                      <td>
+                        {l.hijri}
+                        <span className="sub">
+                          {l.weekdayName} · {l.time}
+                        </span>
+                      </td>
+                      <td>{l.effDurationAr} د</td>
+                      <td>
+                        <span className={`chip ${l.effTypeClass}`}>{l.effTypeLabel}</span>
+                      </td>
+                      <td>
+                        <span className={`chip ${STATUS_CHIP[l.status] ?? ''}`.trimEnd()}>
+                          {l.statusLabel}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="actions">
+                          <Actions l={l} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* البطاقات — دون ٨٢٠px */}
+            <div className="lec-cards">
+              {list.map((l) => (
+                <div key={l.id} className={`lec-card${l.isCancelled ? ' cancelled' : ''}`}>
+                  <div className="row1">
+                    <div className="titles">
+                      <span className="tt">{l.seriesTitle}</span>
+                      {l.seriesBook ? <span className="bk">{l.seriesBook}</span> : null}
+                    </div>
+                    <span className="ord">{l.ordAr}</span>
+                  </div>
+
+                  <div className="sheikh">
+                    <PersonIcon />
+                    <span>{l.sheikhName}</span>
+                  </div>
+
+                  <div className="chips">
+                    <StatusChips l={l} />
+                  </div>
+
+                  <div className="foot-row">
+                    <div className="when">
+                      <CalendarIcon />
+                      <b>{l.weekdayName}</b>
+                      <span className="dash">·</span>
+                      <span>
+                        {l.hijri} · {l.time}
+                      </span>
+                    </div>
+                    <div className="actions">
+                      <Actions l={l} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <ConfirmDialog
