@@ -179,3 +179,172 @@ create policy branding_public_read on storage.objects
 
 -- لا سياسة كتابة: الرفع يمرّ عبر Route Handler يفحص كوكي المشرف
 -- ثم يستخدم service_role — كما في ADR-0004.
+
+
+-- ------------------------------------------------------------
+-- تعديل لاحق: النموذج القالبي والأرشفة (هجرة ٠٠٢ و٠٠٢-ب)
+--
+-- قائمة المشايخ صارت قائمة **قوالب**: اسم الشيخ ورابطه يُنسخان لقطةً
+-- داخل السلسلة عند إنشائها، فحذف القالب لا يمسّ سلسلة ولا لقاءً ولا
+-- حتى الرابط العام `/sheikh/<slug>` — طالما بقيت له سلسلة.
+--
+-- والأرشفة إخفاءٌ قابل للاسترجاع، بديلٌ للحذف النهائي حين لا يُراد
+-- محو التاريخ بل إخفاؤه فقط عن الزائر.
+-- ------------------------------------------------------------
+
+-- اللقطة: تُنسخ عند الإنشاء، ولا تُقرأ من جدول sheikhs بعدها
+alter table series
+  add column sheikh_name text,
+  add column sheikh_slug text;
+
+update series s set sheikh_name = sh.name, sheikh_slug = sh.slug
+  from sheikhs sh where sh.id = s.sheikh_id;
+
+alter table series
+  alter column sheikh_name set not null,
+  alter column sheikh_slug set not null,
+  add constraint series_sheikh_slug_format check (sheikh_slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$');
+
+-- المرجع يبقى للربط، لا لمنع الحذف: حذف القالب يُفرّغه ولا يمسّ اللقطة
+alter table series
+  drop constraint series_sheikh_id_fkey,
+  alter column sheikh_id drop not null,
+  add constraint series_sheikh_id_fkey
+      foreign key (sheikh_id) references sheikhs (id) on delete set null;
+
+-- جسر توافق: يملأ اللقطة تلقائياً في أي إدخال مباشر لا يحملها
+create or replace function series_fill_sheikh_copy() returns trigger
+language plpgsql as $$
+begin
+  if new.sheikh_name is null or new.sheikh_slug is null then
+    select sh.name, sh.slug into new.sheikh_name, new.sheikh_slug
+      from sheikhs sh where sh.id = new.sheikh_id;
+  end if;
+  return new;
+end $$;
+
+create trigger series_fill_sheikh_copy_trg
+  before insert on series
+  for each row execute function series_fill_sheikh_copy();
+
+-- الأرشفة: إخفاء قابل للاسترجاع، على السلسلة وعلى اللقاء كليهما
+alter table series   add column archived_at timestamptz;
+alter table lectures add column archived_at timestamptz;
+
+create index series_live_idx   on series   (archived_at) where archived_at is null;
+create index lectures_live_idx on lectures (archived_at) where archived_at is null;
+
+-- v_lectures يُعاد بناؤه: يقرأ اللقطة (لا join على sheikhs)، ويُخفي المؤرشف
+create or replace view v_lectures as
+select
+  l.id,
+  l.series_id,
+  s.sheikh_id,
+  s.sheikh_name,
+  s.sheikh_slug,
+  s.title,
+  s.book,
+  l.ord,
+  (select count(*) from lectures x
+     where x.series_id = s.id and x.archived_at is null) as series_count,
+  l.starts_at,
+  coalesce(l.duration_min, s.duration_min)   as duration_min,
+  l.starts_at
+    + make_interval(mins => coalesce(l.duration_min, s.duration_min)) as ends_at,
+  coalesce(l.type, s.type)                   as type,
+  coalesce(l.place, s.place, cfg.hq_place)   as place,
+  coalesce(l.map_url, s.map_url, cfg.hq_map_url) as map_url,
+  coalesce(l.join_url, s.join_url)           as join_url,
+  l.is_cancelled,
+  case
+    when l.is_cancelled then 'cancelled'
+    when now() <  l.starts_at then 'upcoming'
+    when now() <  l.starts_at
+         + make_interval(mins => coalesce(l.duration_min, s.duration_min)) then 'live'
+    else 'done'
+  end                                        as status
+from lectures l
+join series  s  on s.id = l.series_id
+cross join settings cfg
+where l.archived_at is null
+  and s.archived_at is null;
+
+-- v_lectures_admin: العرض نفسه بلا ترشيح — تقرأ منه اللوحة وحدها،
+-- فلا تسقط حالة لقاء مؤرشف إلى «قادم» (القاعدة ٦.١)
+create or replace view v_lectures_admin as
+select
+  l.id,
+  l.series_id,
+  s.sheikh_id,
+  s.sheikh_name,
+  s.sheikh_slug,
+  s.title,
+  s.book,
+  l.ord,
+  (select count(*) from lectures x
+    where x.series_id = s.id and x.archived_at is null) as series_count,
+  l.starts_at,
+  coalesce(l.duration_min, s.duration_min)   as duration_min,
+  l.starts_at
+    + make_interval(mins => coalesce(l.duration_min, s.duration_min)) as ends_at,
+  coalesce(l.type, s.type)                   as type,
+  coalesce(l.place, s.place, cfg.hq_place)   as place,
+  coalesce(l.map_url, s.map_url, cfg.hq_map_url) as map_url,
+  coalesce(l.join_url, s.join_url)           as join_url,
+  l.is_cancelled,
+  case
+    when l.is_cancelled then 'cancelled'
+    when now() <  l.starts_at then 'upcoming'
+    when now() <  l.starts_at
+         + make_interval(mins => coalesce(l.duration_min, s.duration_min)) then 'live'
+    else 'done'
+  end                                        as status,
+  l.archived_at                              as lecture_archived_at,
+  s.archived_at                              as series_archived_at
+from lectures l
+join series  s  on s.id = l.series_id
+cross join settings cfg;
+
+grant select on v_lectures_admin to anon, authenticated;
+
+-- حذف لقاء + إعادة ترقيم ذرّية بمرورين — يحفظ الترتيب القائم بلا فجوة
+create or replace function admin_delete_lecture(p_lecture_id uuid)
+returns table (out_series_id uuid, out_remaining integer)
+language plpgsql
+as $$
+declare
+  v_series uuid;
+  v_ord    smallint;
+  v_max    smallint;
+begin
+  select l.series_id, l.ord into v_series, v_ord
+    from lectures l where l.id = p_lecture_id;
+
+  if v_series is null then
+    raise exception 'lecture_not_found' using errcode = 'P0002';
+  end if;
+
+  perform 1 from series where id = v_series for update;
+
+  select max(ord) into v_max from lectures where series_id = v_series;
+  if v_max > 30000 then
+    raise exception 'ord_window_exhausted' using errcode = '22003';
+  end if;
+
+  delete from lectures where id = p_lecture_id;
+
+  update lectures set ord = ord + 1000
+   where lectures.series_id = v_series and lectures.ord > v_ord;
+  update lectures set ord = ord - 1001
+   where lectures.series_id = v_series and lectures.ord > 1000;
+
+  return query
+    select v_series, count(*)::int from lectures l where l.series_id = v_series;
+end $$;
+
+revoke all on function admin_delete_lecture(uuid) from public, anon, authenticated;
+grant execute on function admin_delete_lecture(uuid) to service_role;
+
+-- تنفيذ هذا القسم فعلياً في docs/migration-002-template-and-archive.sql
+-- و docs/migration-002b-missing-pieces.sql — هذا القسم مرجع مطابق للحالة
+-- النهائية، لا يُشغَّل بذاته.
