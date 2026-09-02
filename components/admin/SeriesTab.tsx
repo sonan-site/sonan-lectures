@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { AdminSeriesVM } from '@/lib/admin-queries'
 import { ConfirmDialog, callOrThrow } from './ConfirmDialog'
+import { ArchiveIcon, CopyIcon, DeleteIcon, RestoreIcon } from './ActionIcons'
 
 /**
  * تبويب السلاسل — منقول من `vSer()` في النموذج المعتمد.
@@ -117,9 +118,7 @@ export function SeriesTab({
                   <th>النوع</th>
                   <th>عدد اللقاءات</th>
                   <th>رابط الصفحة</th>
-                  <th />
-                  <th />
-                  <th />
+                  <th>إجراءات</th>
                 </tr>
               </thead>
               <tbody>
@@ -153,27 +152,34 @@ export function SeriesTab({
                       /s/{s.slug}
                     </td>
                     <td>
-                      <button className="btn g sm" onClick={() => copyLink(s.slug)}>
-                        نسخ
-                      </button>
-                    </td>
-                    <td>
-                      <button
-                        className="btn g sm"
-                        disabled={busyId === s.id}
-                        onClick={() => toggleArchive(s)}
-                      >
-                        {busyId === s.id ? '…' : s.isArchived ? 'استرجاع' : 'أرشفة'}
-                      </button>
-                    </td>
-                    <td>
-                      <button
-                        className="btn d sm"
-                        disabled={busyId === s.id}
-                        onClick={() => setToDelete(s)}
-                      >
-                        حذف
-                      </button>
+                      <div className="actions">
+                        <button
+                          className="btn g icon"
+                          title="نسخ الرابط"
+                          aria-label="نسخ الرابط"
+                          onClick={() => copyLink(s.slug)}
+                        >
+                          <CopyIcon />
+                        </button>
+                        <button
+                          className="btn g icon"
+                          disabled={busyId === s.id}
+                          title={s.isArchived ? 'استرجاع' : 'أرشفة'}
+                          aria-label={s.isArchived ? 'استرجاع' : 'أرشفة'}
+                          onClick={() => toggleArchive(s)}
+                        >
+                          {s.isArchived ? <RestoreIcon /> : <ArchiveIcon />}
+                        </button>
+                        <button
+                          className="btn d icon"
+                          disabled={busyId === s.id}
+                          title="حذف"
+                          aria-label="حذف"
+                          onClick={() => setToDelete(s)}
+                        >
+                          <DeleteIcon />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

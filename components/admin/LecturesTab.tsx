@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { arNum } from '@/lib/datetime'
 import type { AdminLectureVM, AdminSeriesVM } from '@/lib/admin-queries'
 import { ConfirmDialog, callOrThrow } from './ConfirmDialog'
+import { ArchiveIcon, DeleteIcon, EditIcon, RestoreIcon } from './ActionIcons'
 
 /**
  * تبويب اللقاءات — منقول من `vLec()` في النموذج المعتمد.
@@ -160,9 +161,7 @@ export function LecturesTab({
                   <th>المدة</th>
                   <th>النوع</th>
                   <th>الحالة</th>
-                  <th />
-                  <th />
-                  <th />
+                  <th>إجراءات</th>
                 </tr>
               </thead>
               <tbody>
@@ -200,28 +199,40 @@ export function LecturesTab({
                       </span>
                     </td>
                     <td>
-                      <button className="btn g sm" onClick={() => onEdit(l.id)}>
-                        تعديل
-                      </button>
-                    </td>
-                    <td>
-                      <button
-                        className="btn g sm"
-                        disabled={busyId === l.id || l.seriesArchived}
-                        title={l.seriesArchived ? 'أرشِف اللقاء من تبويب السلاسل' : undefined}
-                        onClick={() => toggleArchive(l)}
-                      >
-                        {busyId === l.id ? '…' : l.isArchived ? 'استرجاع' : 'أرشفة'}
-                      </button>
-                    </td>
-                    <td>
-                      <button
-                        className="btn d sm"
-                        disabled={busyId === l.id}
-                        onClick={() => setToDelete(l)}
-                      >
-                        حذف
-                      </button>
+                      <div className="actions">
+                        <button
+                          className="btn g icon"
+                          title="تعديل"
+                          aria-label="تعديل"
+                          onClick={() => onEdit(l.id)}
+                        >
+                          <EditIcon />
+                        </button>
+                        <button
+                          className="btn g icon"
+                          disabled={busyId === l.id || l.seriesArchived}
+                          title={
+                            l.seriesArchived
+                              ? 'أرشِف اللقاء من تبويب السلاسل'
+                              : l.isArchived
+                                ? 'استرجاع'
+                                : 'أرشفة'
+                          }
+                          aria-label={l.isArchived ? 'استرجاع' : 'أرشفة'}
+                          onClick={() => toggleArchive(l)}
+                        >
+                          {l.isArchived ? <RestoreIcon /> : <ArchiveIcon />}
+                        </button>
+                        <button
+                          className="btn d icon"
+                          disabled={busyId === l.id}
+                          title="حذف"
+                          aria-label="حذف"
+                          onClick={() => setToDelete(l)}
+                        >
+                          <DeleteIcon />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

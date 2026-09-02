@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { AdminSheikhVM } from '@/lib/admin-queries'
 import { ConfirmDialog, callOrThrow } from './ConfirmDialog'
+import { DeleteIcon, EyeIcon, EyeOffIcon } from './ActionIcons'
 
 /**
  * تبويب المشايخ — منقول من `vShk()` في النموذج المعتمد.
@@ -81,8 +82,7 @@ export function SheikhsTab({
                   <th>رابط صفحته</th>
                   <th>السلاسل</th>
                   <th>الحالة</th>
-                  <th />
-                  <th />
+                  <th>إجراءات</th>
                 </tr>
               </thead>
               <tbody>
@@ -106,22 +106,26 @@ export function SheikhsTab({
                       </span>
                     </td>
                     <td>
-                      <button
-                        className="btn g sm"
-                        disabled={busyId === s.id}
-                        onClick={() => toggle(s)}
-                      >
-                        {busyId === s.id ? '…' : s.isActive ? 'إخفاء' : 'تنشيط'}
-                      </button>
-                    </td>
-                    <td>
-                      <button
-                        className="btn d sm"
-                        disabled={busyId === s.id}
-                        onClick={() => setToDelete(s)}
-                      >
-                        حذف
-                      </button>
+                      <div className="actions">
+                        <button
+                          className="btn g icon"
+                          disabled={busyId === s.id}
+                          title={s.isActive ? 'إخفاء' : 'تنشيط'}
+                          aria-label={s.isActive ? 'إخفاء' : 'تنشيط'}
+                          onClick={() => toggle(s)}
+                        >
+                          {s.isActive ? <EyeOffIcon /> : <EyeIcon />}
+                        </button>
+                        <button
+                          className="btn d icon"
+                          disabled={busyId === s.id}
+                          title="حذف"
+                          aria-label="حذف"
+                          onClick={() => setToDelete(s)}
+                        >
+                          <DeleteIcon />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
