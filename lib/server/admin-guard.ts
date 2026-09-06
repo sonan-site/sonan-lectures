@@ -26,3 +26,25 @@ export async function requireAdmin(): Promise<NextResponse | null> {
 export function fail(message: string, status = 400): NextResponse {
   return NextResponse.json({ error: message }, { status })
 }
+
+/**
+ * يمنع إرسال النموذج من موقع آخر — طبقة ثانية فوق SameSite=Lax.
+ *
+ * كانت معرَّفة محلياً في `app/api/admin/settings/logo/route.ts` وحده؛
+ * نُقلت هنا لتشترك فيها كل معالجات الرفع (الشعار، استيراد الإكسل) بلا
+ * تكرار كود أمنيّ حسّاس.
+ */
+export function sameOrigin(request: Request): boolean {
+  const site = request.headers.get('sec-fetch-site')
+  if (site && site !== 'same-origin') return false
+  const origin = request.headers.get('origin')
+  const host = request.headers.get('host')
+  if (origin && host) {
+    try {
+      if (new URL(origin).host !== host) return false
+    } catch {
+      return false
+    }
+  }
+  return true
+}

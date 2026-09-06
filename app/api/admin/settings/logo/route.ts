@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { randomUUID } from 'node:crypto'
 import { supabaseAdmin } from '@/lib/server/supabase-admin'
-import { fail, requireAdmin } from '@/lib/server/admin-guard'
+import { fail, requireAdmin, sameOrigin } from '@/lib/server/admin-guard'
 
 /**
  * رفع شعار الجمعية وإزالته.
@@ -79,22 +79,6 @@ function dimensions(b: Uint8Array, mime: Mime): { w: number; h: number } | null 
     return null
   }
   return null
-}
-
-/** يمنع إرسال النموذج من موقع آخر — طبقة ثانية فوق SameSite=Lax */
-function sameOrigin(request: Request): boolean {
-  const site = request.headers.get('sec-fetch-site')
-  if (site && site !== 'same-origin') return false
-  const origin = request.headers.get('origin')
-  const host = request.headers.get('host')
-  if (origin && host) {
-    try {
-      if (new URL(origin).host !== host) return false
-    } catch {
-      return false
-    }
-  }
-  return true
 }
 
 /** يحذف الكائن القديم من المخزن — فشله يُسجَّل ولا يُفشل الطلب */

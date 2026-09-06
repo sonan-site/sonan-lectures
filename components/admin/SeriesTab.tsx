@@ -22,11 +22,13 @@ import { ArchiveIcon, CopyIcon, DeleteIcon, RestoreIcon } from './ActionIcons'
 export function SeriesTab({
   series,
   onNewSeries,
+  onImport,
   onCopied,
   onDone,
 }: {
   series: AdminSeriesVM[]
   onNewSeries: () => void
+  onImport: () => void
   onCopied: (message: string) => void
   onDone: (message: string) => void
 }) {
@@ -73,9 +75,19 @@ export function SeriesTab({
           <h2>السلاسل</h2>
           <p>الوعاء الذي يُدخَل مرة وتُولَّد منه اللقاءات</p>
         </div>
-        <button className="btn p" onClick={onNewSeries}>
-          ＋ سلسلة جديدة
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {/* `download` يجبر المتصفح على الحفظ لا التصفّح — رابط من الأصل نفسه
+              لا يستبدل مستند اللوحة مهما كانت الاستجابة (نمط IcsButton.tsx) */}
+          <a className="btn g" href="/api/admin/export" download>
+            ⬇ تصدير
+          </a>
+          <button className="btn g" onClick={onImport}>
+            استيراد من إكسل
+          </button>
+          <button className="btn p" onClick={onNewSeries}>
+            ＋ سلسلة جديدة
+          </button>
+        </div>
       </div>
 
       {error ? (

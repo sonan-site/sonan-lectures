@@ -12,6 +12,7 @@ import { EditLectureForm } from './EditLectureForm'
 import { NewSeriesForm } from './NewSeriesForm'
 import { SheikhsTab } from './SheikhsTab'
 import { NewSheikhForm } from './NewSheikhForm'
+import { ImportSeriesForm } from './ImportSeriesForm'
 import { SettingsTab } from './SettingsTab'
 
 /**
@@ -29,6 +30,7 @@ export function AdminWorkspace({ data, serverNow }: { data: AdminData; serverNow
   const [editId, setEditId] = useState<string | null>(null)
   const [newSeries, setNewSeries] = useState(false)
   const [newSheikh, setNewSheikh] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
   const editing = editId ? (data.lectures.find((l) => l.id === editId) ?? null) : null
@@ -38,6 +40,7 @@ export function AdminWorkspace({ data, serverNow }: { data: AdminData; serverNow
       setEditId(null)
       setNewSeries(false)
       setNewSheikh(false)
+      setImportOpen(false)
       setToast(message)
       router.refresh()
     },
@@ -59,6 +62,7 @@ export function AdminWorkspace({ data, serverNow }: { data: AdminData; serverNow
       <SeriesTab
         series={data.series}
         onNewSeries={() => setNewSeries(true)}
+        onImport={() => setImportOpen(true)}
         onCopied={setToast}
         onDone={done}
       />
@@ -129,6 +133,10 @@ export function AdminWorkspace({ data, serverNow }: { data: AdminData; serverNow
           onCreated={done}
           onCancel={() => setNewSeries(false)}
         />
+      </AdminDialog>
+
+      <AdminDialog title="استيراد من إكسل" open={importOpen} onClose={() => setImportOpen(false)}>
+        <ImportSeriesForm onCreated={done} onCancel={() => setImportOpen(false)} />
       </AdminDialog>
 
       <Toast message={toast} onDone={() => setToast(null)} />
