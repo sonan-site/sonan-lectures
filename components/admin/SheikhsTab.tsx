@@ -15,6 +15,11 @@ import { DeleteIcon, EyeIcon, EyeOffIcon } from './ActionIcons'
  * كانت تفعله: هذا الجدول صار **قائمة قوالب**، والاسم والرابط نُسخا لقطةً
  * داخل كل سلسلة عند إنشائها. فحذف القالب هنا لا يمسّ سلسلة ولا لقاءً ولا
  * حتى الرابط العام `/sheikh/<slug>` — تشهد له نافذة التأكيد بالعدد.
+ *
+ * ⚠️ **دون ٨٢٠px يتحوّل الجدول إلى بطاقات** (`.admin-cards`) — نفس أصناف
+ * اللقاءات والسلاسل معمَّمة. الشارة الرقمية هنا `seriesCountAr`، ورقاقة
+ * الحالة تقع في سطر الإجراءات بدل عمود مستقلّ — أقلّ حقولاً من التبويبين
+ * الآخرين فتركيبها أبسط: لا سطر «meta» منفصل، رابط الصفحة وحده يكفي.
  */
 export function SheikhsTab({
   sheikhs,
@@ -54,6 +59,32 @@ export function SheikhsTab({
     }
   }
 
+  /** أزرار الإجراءات — مصدر واحد، يُستعمل في الجدول والبطاقة معاً */
+  function Actions({ s }: { s: AdminSheikhVM }) {
+    return (
+      <>
+        <button
+          className="btn g icon"
+          disabled={busyId === s.id}
+          title={s.isActive ? 'إخفاء' : 'تنشيط'}
+          aria-label={s.isActive ? 'إخفاء' : 'تنشيط'}
+          onClick={() => toggle(s)}
+        >
+          {s.isActive ? <EyeOffIcon /> : <EyeIcon />}
+        </button>
+        <button
+          className="btn d icon"
+          disabled={busyId === s.id}
+          title="حذف"
+          aria-label="حذف"
+          onClick={() => setToDelete(s)}
+        >
+          <DeleteIcon />
+        </button>
+      </>
+    )
+  }
+
   return (
     <>
       <div className="head">
@@ -74,7 +105,7 @@ export function SheikhsTab({
 
       <div className="panel">
         {/* النموذج يصيّر الجدول دائماً بلا فرع «فارغ» — بخلاف تبويب السلاسل */}
-        <div className="tblwrap">
+        <div className="tblwrap admin-desktop-table">
           <table>
               <thead>
                 <tr>
@@ -107,30 +138,40 @@ export function SheikhsTab({
                     </td>
                     <td>
                       <div className="actions">
-                        <button
-                          className="btn g icon"
-                          disabled={busyId === s.id}
-                          title={s.isActive ? 'إخفاء' : 'تنشيط'}
-                          aria-label={s.isActive ? 'إخفاء' : 'تنشيط'}
-                          onClick={() => toggle(s)}
-                        >
-                          {s.isActive ? <EyeOffIcon /> : <EyeIcon />}
-                        </button>
-                        <button
-                          className="btn d icon"
-                          disabled={busyId === s.id}
-                          title="حذف"
-                          aria-label="حذف"
-                          onClick={() => setToDelete(s)}
-                        >
-                          <DeleteIcon />
-                        </button>
+                        <Actions s={s} />
                       </div>
                     </td>
                   </tr>
                 ))}
             </tbody>
           </table>
+        </div>
+
+        {/* البطاقات — دون ٨٢٠px */}
+        <div className="admin-cards">
+          {sheikhs.map((s) => (
+            <div key={s.id} className="admin-card">
+              <div className="row1">
+                <div className="titles">
+                  <span className="tt">{s.name}</span>
+                </div>
+                <span className="badge-num">{s.seriesCountAr}</span>
+              </div>
+
+              <p className="link-line" dir="ltr">
+                /sheikh/{s.slug}
+              </p>
+
+              <div className="foot-row">
+                <span className={s.isActive ? 'chip act' : 'chip ina'}>
+                  {s.isActive ? 'نشط' : 'غير نشط'}
+                </span>
+                <div className="actions">
+                  <Actions s={s} />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

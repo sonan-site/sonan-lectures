@@ -29,7 +29,8 @@ import {
  *   · محذوف — نهائيّ، وتُعاد ترقيم ما بعده تلقائياً.
  * والمؤرشف مخفيّ افتراضاً في هذا الجدول أيضاً؛ مفتاح «إظهار المؤرشف» يكشفه.
  *
- * ⚠️ **دون ٨٢٠px يتحوّل الجدول إلى بطاقات** (`.lec-cards`)، لا يُمرَّر أفقياً.
+ * ⚠️ **دون ٨٢٠px يتحوّل الجدول إلى بطاقات** (`.admin-cards`، أصناف عامّة
+ * تشترك فيها اللقاءات والسلاسل والمشايخ)، لا يُمرَّر أفقياً.
  * القرار على مسوَّدة Artifact قارنت بديلَين — بطاقات مقابل عمود مثبَّت — واعتُمدت
  * البطاقات لأن الجدول المزدحم بثمانية أعمدة كان يحتاج تمريراً أفقياً على أي
  * عرض، وهذا نمط "تطبيق ويب" لا تطبيق مثبَّت. البطاقة والجدول يُصيَّران معاً
@@ -223,7 +224,7 @@ export function LecturesTab({
         ) : (
           <>
             {/* الجدول — من ٨٢٠px فما فوق */}
-            <div className="tblwrap lec-desktop-table">
+            <div className="tblwrap admin-desktop-table">
               <table>
                 <thead>
                   <tr>
@@ -283,18 +284,18 @@ export function LecturesTab({
             </div>
 
             {/* البطاقات — دون ٨٢٠px */}
-            <div className="lec-cards">
+            <div className="admin-cards">
               {list.map((l) => (
-                <div key={l.id} className={`lec-card${l.isCancelled ? ' cancelled' : ''}`}>
+                <div key={l.id} className={`admin-card${l.isCancelled ? ' cancelled' : ''}`}>
                   <div className="row1">
                     <div className="titles">
                       <span className="tt">{l.seriesTitle}</span>
                       {l.seriesBook ? <span className="bk">{l.seriesBook}</span> : null}
                     </div>
-                    <span className="ord">{l.ordAr}</span>
+                    <span className="badge-num">{l.ordAr}</span>
                   </div>
 
-                  <div className="sheikh">
+                  <div className="meta">
                     <PersonIcon />
                     <span>{l.sheikhName}</span>
                   </div>

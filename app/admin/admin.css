@@ -85,65 +85,80 @@ main{padding:24px 0 60px}
 .tblwrap{overflow-x:auto}
 
 /* ============================================================
-   بطاقات اللقاءات — تعرض دون ٨٢٠px بدل جدول اللقاءات (لا تمرير أفقي).
+   بطاقات اللوحة — تعرض دون ٨٢٠px بدل الجدول (لا تمرير أفقي). عُمِّمت
+   من دفعة اللقاءات (كانت `.lec-*`) لتُستعمل في اللقاءات والسلاسل
+   والمشايخ معاً — نفس اللبنات، محتوى مختلف لكل تبويب.
    الفكرة معتمدة من مقارنة Artifact قارنت بطاقات وعموداً مثبَّتاً؛
-   البطاقات فازت لأن جدول اللقاءات ثمانية أعمدة، وأي تمرير أفقي على
-   الجوال يُذكّر "بتطبيق ويب" لا تطبيق مثبَّت (انظر LecturesTab.tsx).
+   البطاقات فازت لأن جدول ثمانية أعمدة يحتاج تمريراً أفقياً على أي
+   عرض، وهذا يُذكّر "بتطبيق ويب" لا تطبيق مثبَّت.
 
-   .lec-cards مخفيّة افتراضاً؛ الوسم .lec-desktop-table وحده يُخفى دون
-   ٨٢٠px — لا `.tblwrap` عامةً، لأن السلاسل والمشايخ ليس لهما بديل بطاقة
-   بعد وتبقى جداولها قابلة للتمرير كما هي.
+   `.admin-cards` مخفيّة افتراضاً؛ الوسم `.admin-desktop-table` وحده
+   يُخفى دون ٨٢٠px — لا `.tblwrap` عامةً، فلو احتاج تبويبٌ جديداً لاحقاً
+   جدولاً بلا بديل بطاقة يبقى قابلاً للتمرير كسابق عهده.
    ============================================================ */
-.lec-cards{display:none;flex-direction:column;gap:10px}
+.admin-cards{display:none;flex-direction:column;gap:10px}
 
-.lec-card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:13px 13px 11px}
+.admin-card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:13px 13px 11px}
 
-.lec-card .row1{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.admin-card .row1{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 
-.lec-card .ord{
+/* الرقم الأهمّ في البطاقة: ترتيب اللقاء، أو عدد لقاءات السلسلة، أو
+   عدد سلاسل الشيخ — معنى مختلف بحسب التبويب، تصميم واحد */
+.admin-card .badge-num{
   font-size:11px;font-weight:800;color:var(--petrol);background:var(--beige);
   border-radius:7px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;
   flex:0 0 auto;font-variant-numeric:tabular-nums;
 }
 
-.lec-card .titles{flex:1;min-width:0}
+.admin-card .titles{flex:1;min-width:0}
 
-.lec-card .tt{font-size:14px;font-weight:800;color:var(--petrol);display:block}
+.admin-card .tt{font-size:14px;font-weight:800;color:var(--petrol);display:block}
 
-.lec-card .bk{font-size:11px;color:var(--warm);font-weight:600;display:block;margin-top:1px}
+.admin-card .bk{font-size:11px;color:var(--warm);font-weight:600;display:block;margin-top:1px}
 
-.lec-card.cancelled .tt{text-decoration:line-through}
+.admin-card.cancelled .tt{text-decoration:line-through}
 
-.lec-card .sheikh{
+/* سطر أيقونة+نصّ — اسم الشيخ في اللقاءات والسلاسل */
+.admin-card .meta{
   display:flex;align-items:center;gap:6px;font-size:12px;color:var(--brown);font-weight:700;
   margin-top:7px;
 }
 
-.lec-card .sheikh svg{width:13px;height:13px;flex:0 0 auto;stroke:var(--warm);fill:none;stroke-width:2}
+.admin-card .meta svg{width:13px;height:13px;flex:0 0 auto;stroke:var(--warm);fill:none;stroke-width:2}
 
-.lec-card .chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+.admin-card .link-line{
+  font-size:11.5px;color:var(--brown);font-weight:600;margin-top:7px;
+  font-family:ui-monospace, monospace;
+}
 
-/* السطر السفلي: اليوم والتاريخ في جهة، أيقونات الإجراءات في المقابلة —
-   سطر واحد بدل سطرين، كما طُلب صراحة */
-.lec-card .foot-row{
+.admin-card .chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+
+/* السطر السفلي: معلومة إضافية في جهة، أيقونات الإجراءات في المقابلة —
+   سطر واحد بدل سطرين */
+.admin-card .foot-row{
   display:flex;align-items:center;justify-content:space-between;gap:8px;
   margin-top:11px;padding-top:10px;border-top:1px dashed var(--line);
 }
 
-.lec-card .when{
+.admin-card .when{
   display:flex;align-items:center;gap:5px;font-size:11px;color:var(--brown);font-weight:600;
   flex:1 1 auto;min-width:0;overflow:hidden;
 }
 
-.lec-card .when svg{width:13px;height:13px;flex:0 0 auto;stroke:var(--warm);fill:none;stroke-width:2}
+.admin-card .when svg{width:13px;height:13px;flex:0 0 auto;stroke:var(--warm);fill:none;stroke-width:2}
 
-.lec-card .when b{font-weight:700;color:var(--petrol);white-space:nowrap;flex:0 0 auto}
+.admin-card .when b{font-weight:700;color:var(--petrol);white-space:nowrap;flex:0 0 auto}
 
-.lec-card .when .dash{color:var(--line);flex:0 0 auto}
+.admin-card .when .dash{color:var(--line);flex:0 0 auto}
 
-.lec-card .when>span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admin-card .when>span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-.lec-card .foot-row .actions{flex:0 0 auto}
+.admin-card .foot-row .path{
+  flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:11.5px;color:var(--brown);font-weight:600;font-family:ui-monospace, monospace;
+}
+
+.admin-card .foot-row .actions{flex:0 0 auto}
 
 .ph2{padding:15px 18px;border-bottom:1px solid var(--line);background:var(--paper);font-size:14.5px;font-weight:800;display:flex;justify-content:space-between;align-items:center;gap:12px}
 
@@ -303,8 +318,8 @@ dialog::backdrop{background:rgba(28,44,50,.6)}
   .toast{bottom:86px}.toast.on{bottom:94px}
   .bar2{justify-content:stretch}
   .bar2 .btn{flex:1;justify-content:center}
-  .lec-desktop-table{display:none}
-  .lec-cards{display:flex}
+  .admin-desktop-table{display:none}
+  .admin-cards{display:flex}
 }
 
 /* ============================================================

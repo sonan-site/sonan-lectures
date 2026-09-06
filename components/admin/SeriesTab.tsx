@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import type { AdminSeriesVM } from '@/lib/admin-queries'
 import { ConfirmDialog, callOrThrow } from './ConfirmDialog'
-import { ArchiveIcon, CopyIcon, DeleteIcon, RestoreIcon } from './ActionIcons'
+import { ArchiveIcon, CopyIcon, DeleteIcon, PersonIcon, RestoreIcon } from './ActionIcons'
 
 /**
  * تبويب السلاسل — منقول من `vSer()` في النموذج المعتمد.
@@ -18,6 +18,11 @@ import { ArchiveIcon, CopyIcon, DeleteIcon, RestoreIcon } from './ActionIcons'
  *   · الحذف نهائيّ ويأخذ لقاءاتها معه (الأثر الجانبي ٨.٢) — لخطأ الإدخال.
  *
  * والمؤرشفة مخفيّة افتراضاً هنا أيضاً؛ مفتاح «إظهار المؤرشف» يكشفها.
+ *
+ * ⚠️ **دون ٨٢٠px يتحوّل الجدول إلى بطاقات** (`.admin-cards`) — نفس أصناف
+ * اللقاءات معمَّمة، لا طراز جديد. الشارة الرقمية هنا `countAr` (عدد
+ * اللقاءات) لا ترتيباً؛ ورابط الصفحة يظهر نصّاً في سطر الإجراءات كما في
+ * الجدول تماماً، بلا أيقونة إضافية.
  */
 export function SeriesTab({
   series,
@@ -68,6 +73,40 @@ export function SeriesTab({
     }
   }
 
+  /** أزرار الإجراءات — مصدر واحد، يُستعمل في الجدول والبطاقة معاً */
+  function Actions({ s }: { s: AdminSeriesVM }) {
+    return (
+      <>
+        <button
+          className="btn g icon"
+          title="نسخ الرابط"
+          aria-label="نسخ الرابط"
+          onClick={() => copyLink(s.slug)}
+        >
+          <CopyIcon />
+        </button>
+        <button
+          className="btn g icon"
+          disabled={busyId === s.id}
+          title={s.isArchived ? 'استرجاع' : 'أرشفة'}
+          aria-label={s.isArchived ? 'استرجاع' : 'أرشفة'}
+          onClick={() => toggleArchive(s)}
+        >
+          {s.isArchived ? <RestoreIcon /> : <ArchiveIcon />}
+        </button>
+        <button
+          className="btn d icon"
+          disabled={busyId === s.id}
+          title="حذف"
+          aria-label="حذف"
+          onClick={() => setToDelete(s)}
+        >
+          <DeleteIcon />
+        </button>
+      </>
+    )
+  }
+
   return (
     <>
       <div className="head">
@@ -82,7 +121,7 @@ export function SeriesTab({
             ⬇ تصدير
           </a>
           <button className="btn g" onClick={onImport}>
-            استيراد من إكسل
+            ⬆ استيراد
           </button>
           <button className="btn p" onClick={onNewSeries}>
             ＋ سلسلة جديدة
@@ -107,9 +146,7 @@ export function SeriesTab({
         <div className="panel">
           {archivedCount > 0 ? (
             <div className="ph2">
-              <span>
-                {showArchived ? 'كل السلاسل' : 'السلاسل الظاهرة'}
-              </span>
+              <span>{showArchived ? 'كل السلاسل' : 'السلاسل الظاهرة'}</span>
               <label className="sw">
                 <input
                   type="checkbox"
@@ -121,7 +158,8 @@ export function SeriesTab({
             </div>
           ) : null}
 
-          <div className="tblwrap">
+          {/* الجدول — من ٨٢٠px فما فوق */}
+          <div className="tblwrap admin-desktop-table">
             <table>
               <thead>
                 <tr>
@@ -165,38 +203,48 @@ export function SeriesTab({
                     </td>
                     <td>
                       <div className="actions">
-                        <button
-                          className="btn g icon"
-                          title="نسخ الرابط"
-                          aria-label="نسخ الرابط"
-                          onClick={() => copyLink(s.slug)}
-                        >
-                          <CopyIcon />
-                        </button>
-                        <button
-                          className="btn g icon"
-                          disabled={busyId === s.id}
-                          title={s.isArchived ? 'استرجاع' : 'أرشفة'}
-                          aria-label={s.isArchived ? 'استرجاع' : 'أرشفة'}
-                          onClick={() => toggleArchive(s)}
-                        >
-                          {s.isArchived ? <RestoreIcon /> : <ArchiveIcon />}
-                        </button>
-                        <button
-                          className="btn d icon"
-                          disabled={busyId === s.id}
-                          title="حذف"
-                          aria-label="حذف"
-                          onClick={() => setToDelete(s)}
-                        >
-                          <DeleteIcon />
-                        </button>
+                        <Actions s={s} />
                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* البطاقات — دون ٨٢٠px */}
+          <div className="admin-cards">
+            {visible.map((s) => (
+              <div key={s.id} className={`admin-card${s.isArchived ? ' cancelled' : ''}`}>
+                <div className="row1">
+                  <div className="titles">
+                    <span className="tt">{s.title}</span>
+                    {s.book ? <span className="bk">{s.book}</span> : null}
+                  </div>
+                  <span className="badge-num">{s.countAr}</span>
+                </div>
+
+                <div className="meta">
+                  <PersonIcon />
+                  <span>{s.sheikhName}</span>
+                </div>
+                {s.sheikhTemplateGone ? <p className="bk" style={{ marginTop: 2 }}>قالبه محذوف</p> : null}
+
+                <div className="chips">
+                  <span className={`chip ${s.typeClass}`}>{s.typeLabel}</span>
+                  {s.isArchived ? <span className="chip ina">مؤرشفة</span> : null}
+                </div>
+
+                <div className="foot-row">
+                  <span className="path" dir="ltr">
+                    /s/{s.slug}
+                  </span>
+                  <div className="actions">
+                    <Actions s={s} />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
