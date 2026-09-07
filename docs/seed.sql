@@ -156,22 +156,40 @@ from series s where s.slug = 'adab-talib-alilm';
 -- ⚠️ حُدِّث بعد هجرة ٠٠٢: كان الحارس يعتمد على قيد `on delete restrict`
 --    الذي صار `on delete set null`. فلو تُرك كما كان، لمرّ الأمر صامتاً
 --    وأيتم سلاسلك الحقيقية بدل أن يرفض. الحارس الآن صريح في الشرط.
+--
+-- ⚠️ حُدِّث ٢٠٢٦-٠٩-٠٧: أُضيف رابع `ahmd-bn-mhmd-alsqawb` — شيخ تجريبي
+--    زائد أُضيف لاحقاً من لوحة التحكم نفسها (لا من هذا الملف) لتجربة
+--    واجهة تبويب المشايخ، وبلا أي سلسلة له. والحارس الوحيد الكافي الآن
+--    `not exists (select 1 from series ...)` — يحمي أي شيخ من الأربعة
+--    اكتسب سلسلة حقيقية بعد الزرع، سواء كانت من سلاسل الزرع أو غيرها.
 -- =============================================================
 
 /*
-with removed as (
-  delete from series
-   where slug in ('bulugh-almaram','omdat-alahkam','aljam-bayn-alsahihayn',
-                  'manhaj-talib-alilm','adab-talib-alilm')
-  returning sheikh_id
-)
+delete from series
+ where slug in ('bulugh-almaram','omdat-alahkam','aljam-bayn-alsahihayn',
+                'manhaj-talib-alilm','adab-talib-alilm');
+
 delete from sheikhs
- where slug in ('abdullah-almohammed','sulaiman-alfahd','ahmed-alnasser')
-   and id in (select sheikh_id from removed where sheikh_id is not null)
-   -- الحارس: لا يُحذف شيخ بقيت له سلسلة حقيقية أنشأتَها أنت
+ where slug in ('abdullah-almohammed','sulaiman-alfahd','ahmed-alnasser',
+                'ahmd-bn-mhmd-alsqawb')
+   -- الحارس: لا يُحذف شيخ بقيت له أي سلسلة، من الزرع كانت أو حقيقية
    and not exists (select 1 from series s where s.sheikh_id = sheikhs.id);
 */
 
 -- اللقاءات تُحذف تلقائياً مع سلاسلها (on delete cascade — الأثر الجانبي ٨.٢).
 -- وبعد هجرة ٠٠٢ صار حذف الشيخ لا يمسّ سلاسله أصلاً (اللقطة محفوظة فيها)،
 -- فالحارس أعلاه احتياطٌ ليبقى الأمر مقصوراً على البيانات التجريبية وحدها.
+
+
+-- =============================================================
+-- تحقّق بعد الحذف — الصق هذا وحده وشغّله بعد أمر الحذف أعلاه،
+-- وأرسل لي النتيجة. المتوقّع: ٠ · ٠ · ٠، وصفّ settings سليم (لم يُمسّ).
+-- =============================================================
+
+/*
+select
+  (select count(*) from sheikhs)  as sheikhs_left,
+  (select count(*) from series)   as series_left,
+  (select count(*) from lectures) as lectures_left,
+  (select hq_place from settings) as settings_hq_place;
+*/
