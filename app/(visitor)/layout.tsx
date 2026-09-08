@@ -41,13 +41,15 @@ export default async function VisitorLayout({ children }: { children: React.Reac
               <span>جمعية سنن التعليمية · بريدة</span>
             </div>
           </div>
-          <div className="tzchip">جميع الأوقات بتوقيت السعودية</div>
         </div>
       </header>
 
       {children}
 
-      <footer className="foot wrap">مقر جمعية سنن التعليمية · بريدة — القصيم</footer>
+      <footer className="foot wrap">
+        مقر جمعية سنن التعليمية · بريدة — القصيم
+        <div className="tzchip">جميع الأوقات بتوقيت السعودية</div>
+      </footer>
     </>
   )
 }
