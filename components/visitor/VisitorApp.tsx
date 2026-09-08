@@ -41,6 +41,7 @@ export function VisitorApp({
   showSeriesColumns = true,
   showSheikhColumn,
   showScopeColumns = false,
+  showSheikhLine = true,
   header,
 }: {
   hero: HeroVM | null
@@ -68,6 +69,8 @@ export function VisitorApp({
   showSheikhColumn?: boolean
   /** عمودا «من»/«إلى» — صفحة السلسلة وحدها تُمرّره، وفقط حين تستعملهما */
   showScopeColumns?: boolean
+  /** يخفي سطر الشيخ في بطاقة الجوال — صفحة الشيخ وحدها تُمرّر false */
+  showSheikhLine?: boolean
   /** رأس خاص بالصفحة (رأس السلسلة مثلاً) يُدرَج فوق الجدول */
   header?: React.ReactNode
 }) {
@@ -172,7 +175,13 @@ export function VisitorApp({
             showSheikhColumn={showSheikhColumn}
             showScopeColumns={showScopeColumns}
           />
-          <MobileCards rows={tableRows} emptyKind={kind} onOpen={openLecture} />
+          <MobileCards
+            rows={tableRows}
+            emptyKind={kind}
+            onOpen={openLecture}
+            showSeriesColumns={showSeriesColumns}
+            showSheikhLine={showSheikhLine}
+          />
         </section>
 
         <section

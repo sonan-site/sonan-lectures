@@ -102,6 +102,7 @@ export default async function SheikhPage({
       todayKey={dayKey(now)}
       serverNow={now}
       sheikhMode="navigate"
+      showSheikhLine={false}
       publicLink={{
         text: `صفحة ${sheikh.name} — رابط يُرسَل إليه:`,
         path: `/sheikh/${sheikh.slug}`,
