@@ -147,6 +147,8 @@ export function LecturesTab({
         <span className={`chip ${l.effTypeClass}`}>{l.effTypeLabel}</span>
         <span className={`chip ${STATUS_CHIP[l.status] ?? ''}`.trimEnd()}>{l.statusLabel}</span>
         {l.isOverridden ? <span className="chip ov">مختلف عن السلسلة</span> : null}
+        {/* المقدار ليس تجاوزاً — لا نظير له على السلسلة أصلاً، فشارة مستقلّة */}
+        {l.hasScope ? <span className="chip on">المقدار</span> : null}
         {l.isArchived || l.seriesArchived ? (
           <span className="chip ina">
             {l.seriesArchived && !l.isArchived ? 'سلسلته مؤرشفة' : 'مؤرشف'}
@@ -248,6 +250,11 @@ export function LecturesTab({
                         {l.isOverridden ? (
                           <span className="chip ov" style={{ marginTop: 4 }}>
                             مختلف عن السلسلة
+                          </span>
+                        ) : null}
+                        {l.hasScope ? (
+                          <span className="chip on" style={{ marginTop: 4 }}>
+                            المقدار
                           </span>
                         ) : null}
                         {l.isArchived || l.seriesArchived ? (

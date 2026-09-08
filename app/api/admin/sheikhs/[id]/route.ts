@@ -60,11 +60,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 /**
  * حذف قالب الشيخ من القائمة.
  *
- * لا يمسّ سلسلةً ولا لقاءً: القيد `on delete set null` يُفرّغ المرجع وحده،
- * واللقطة داخل السلسلة هي مصدر الاسم والرابط في كل ما يُعرض.
+ * لا يمسّ سلسلةً ولا لقاءً: قيد `series.sheikh_id` وقيد `lectures.sheikh_id`
+ * كلاهما `on delete set null` (هجرة ٠٠٣ مدّت النمط إلى تجاوز اللقاء أيضاً)،
+ * فيُفرَّغ المرجعان معاً واللقطة هي مصدر الاسم والرابط في كل ما يُعرض.
  *
- * `?expect=<عدد السلاسل>` إلزاميّ، وهو العدد الذي ذكرته نافذة التأكيد —
- * فلا يُحذف قالبٌ صار له منذ لحظة العرض سلاسل لم يرها المشرف.
+ * `?expect=<عدد السلاسل>&expectLectures=<عدد اللقاءات المتجاوِزة>` إلزاميّان،
+ * وهما العددان اللذان ذكرتهما نافذة التأكيد — فلا يُحذف قالبٌ صار له منذ
+ * لحظة العرض ما لم يره المشرف.
  */
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const denied = await requireAdmin()
@@ -73,9 +75,19 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const { id } = await params
   if (!UUID.test(id)) return fail('معرّف الشيخ غير صالح.')
 
-  const raw = new URL(request.url).searchParams.get('expect')
-  const expect = Number(raw)
-  if (raw === null || !Number.isInteger(expect) || expect < 0) {
+  const sp = new URL(request.url).searchParams
+  const rawSeries = sp.get('expect')
+  const rawLectures = sp.get('expectLectures')
+  const expectSeries = Number(rawSeries)
+  const expectLectures = Number(rawLectures)
+  if (
+    rawSeries === null ||
+    !Number.isInteger(expectSeries) ||
+    expectSeries < 0 ||
+    rawLectures === null ||
+    !Number.isInteger(expectLectures) ||
+    expectLectures < 0
+  ) {
     return fail('طلب الحذف ناقص. أعد تحميل الصفحة وحاول مرة أخرى.')
   }
 
@@ -88,16 +100,20 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   if (readErr) return fail('تعذّر الوصول إلى بيانات الشيخ.', 503)
   if (!sheikh) return fail('لا يوجد شيخ بهذا المعرّف.', 404)
 
-  const { count, error: cntErr } = await supabaseAdmin
-    .from('series')
-    .select('id', { count: 'exact', head: true })
-    .eq('sheikh_id', id)
+  const [seriesRes, lecturesRes] = await Promise.all([
+    supabaseAdmin.from('series').select('id', { count: 'exact', head: true }).eq('sheikh_id', id),
+    supabaseAdmin.from('lectures').select('id', { count: 'exact', head: true }).eq('sheikh_id', id),
+  ])
 
-  if (cntErr || count === null) return fail('تعذّر إحصاء سلاسل الشيخ.', 503)
+  if (seriesRes.error || seriesRes.count === null) return fail('تعذّر إحصاء سلاسل الشيخ.', 503)
+  if (lecturesRes.error || lecturesRes.count === null) return fail('تعذّر إحصاء لقاءات الشيخ.', 503)
 
-  if (count !== expect) {
+  const count = seriesRes.count
+  const lectureCount = lecturesRes.count
+
+  if (count !== expectSeries || lectureCount !== expectLectures) {
     return fail(
-      `تغيّر عدد سلاسل هذا الشيخ (${count} لا ${expect}). أعد تحميل الصفحة وراجع قبل الحذف.`,
+      `تغيّر عدد سلاسل أو لقاءات هذا الشيخ (${count} سلسلة و${lectureCount} لقاء متجاوِز، لا ${expectSeries} و${expectLectures}). أعد تحميل الصفحة وراجع قبل الحذف.`,
       409
     )
   }
@@ -105,11 +121,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const { error: delErr } = await supabaseAdmin.from('sheikhs').delete().eq('id', id)
   if (delErr) return fail('تعذّر حذف الشيخ من القائمة. حاول مرة أخرى.', 503)
 
+  const untouched = count === 0 && lectureCount === 0
   return NextResponse.json({
     ok: true,
-    message:
-      count === 0
-        ? `حُذف «${sheikh.name}» من قائمة القوالب`
-        : `حُذف «${sheikh.name}» من القائمة — و${count} من سلاسله باقية باسمه ورابطه`,
+    message: untouched
+      ? `حُذف «${sheikh.name}» من قائمة القوالب`
+      : `حُذف «${sheikh.name}» من القائمة — و${count} من سلاسله و${lectureCount} من لقاءاته المتجاوِزة باقية باسمه`,
   })
 }

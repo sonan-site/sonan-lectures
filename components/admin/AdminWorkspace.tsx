@@ -112,7 +112,12 @@ export function AdminWorkspace({ data, serverNow }: { data: AdminData; serverNow
         onClose={() => setEditId(null)}
       >
         {editing ? (
-          <EditLectureForm vm={editing} onSaved={done} onCancel={() => setEditId(null)} />
+          <EditLectureForm
+            vm={editing}
+            sheikhs={data.sheikhs}
+            onSaved={done}
+            onCancel={() => setEditId(null)}
+          />
         ) : null}
       </AdminDialog>
 

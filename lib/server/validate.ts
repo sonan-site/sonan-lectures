@@ -99,6 +99,12 @@ export function requiredUuid(v: unknown, label: string): string {
   return t
 }
 
+/** معرّف اختياري: الفراغ يعني عدم التجاوز (وراثة) */
+export function optionalUuid(v: unknown, label: string): string | null {
+  if (v === null || v === undefined || v === '') return null
+  return requiredUuid(v, label)
+}
+
 /**
  * تاريخ ووقت بتوقيت الرياض ← لحظة مطلقة.
  *

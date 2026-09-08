@@ -24,10 +24,13 @@ const TYPES: { value: LectureType; label: string }[] = [
 
 export function EditLectureForm({
   vm,
+  sheikhs,
   onSaved,
   onCancel,
 }: {
   vm: AdminLectureVM
+  /** المشايخ النشطون — لقائمة اختيار شيخ اللقاء */
+  sheikhs: { id: string; name: string; slug: string }[]
   onSaved: (message: string) => void
   onCancel: () => void
 }) {
@@ -37,9 +40,16 @@ export function EditLectureForm({
   const [type, setType] = useState<string>(vm.ovType ?? '')
   const [place, setPlace] = useState(vm.ovPlace ?? '')
   const [joinUrl, setJoinUrl] = useState(vm.ovJoinUrl ?? '')
+  const [sheikhId, setSheikhId] = useState(vm.ovSheikhId ?? '')
+  const [scopeFrom, setScopeFrom] = useState(vm.scopeFrom ?? '')
+  const [scopeTo, setScopeTo] = useState(vm.scopeTo ?? '')
   const [cancelled, setCancelled] = useState(vm.isCancelled)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  // سلسلة بلا شيخ افتراضي (تناوب كامل، مستورَدة فقط) ⇐ لا خيار «كما
+  // السلسلة»: الحارس في القاعدة يرفض لقاءً بلا شيخ فعّال فيها دائماً.
+  const canInheritSheikh = vm.inhSheikhName !== null
 
   // معاينة الموعد بالهجري تحت الحقلين — تتحدّث مع كل تغيير كما في النموذج
   let preview = ''
@@ -66,6 +76,9 @@ export function EditLectureForm({
           type: type === '' ? null : type,
           place: place.trim() === '' ? null : place.trim(),
           join_url: joinUrl.trim() === '' ? null : joinUrl.trim(),
+          sheikh_id: sheikhId === '' ? null : sheikhId,
+          scope_from: scopeFrom.trim() === '' ? null : scopeFrom.trim(),
+          scope_to: scopeTo.trim() === '' ? null : scopeTo.trim(),
           is_cancelled: cancelled,
         }),
       })
@@ -150,6 +163,42 @@ export function EditLectureForm({
               {t.label}
             </label>
           ))}
+        </div>
+      </div>
+
+      <div className="f" style={{ marginTop: 14 }}>
+        <label htmlFor="eSh">
+          الشيخ{' '}
+          {canInheritSheikh ? <em>(كما السلسلة ⇐ {vm.inhSheikhName})</em> : <em>(مطلوب — هذه السلسلة بلا شيخ افتراضي)</em>}
+        </label>
+        <select id="eSh" value={sheikhId} onChange={(e) => setSheikhId(e.target.value)}>
+          {canInheritSheikh ? <option value="">كما السلسلة</option> : null}
+          {sheikhs.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="grid2" style={{ marginTop: 14 }}>
+        <div className="f">
+          <label htmlFor="eScFrom">مقدار — من</label>
+          <input
+            id="eScFrom"
+            type="text"
+            value={scopeFrom}
+            onChange={(e) => setScopeFrom(e.target.value)}
+          />
+        </div>
+        <div className="f">
+          <label htmlFor="eScTo">مقدار — إلى</label>
+          <input
+            id="eScTo"
+            type="text"
+            value={scopeTo}
+            onChange={(e) => setScopeTo(e.target.value)}
+          />
         </div>
       </div>
 

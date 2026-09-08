@@ -8,6 +8,7 @@ import {
   optionalText,
   optionalType,
   optionalUrl,
+  optionalUuid,
   riyadhToInstant,
 } from '@/lib/server/validate'
 import type { LectureType } from '@/lib/types'
@@ -80,6 +81,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     place: string | null
     join_url: string | null
     is_cancelled: boolean
+    sheikh_id: string | null
+    sheikh_name: null
+    sheikh_slug: null
+    scope_from: string | null
+    scope_to: string | null
   }
 
   try {
@@ -90,6 +96,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       place: optionalText(body.place, 'المكان'),
       join_url: optionalUrl(body.join_url, 'رابط الدخول'),
       is_cancelled: body.is_cancelled === true,
+      // sheikh_name/slug تُرسَلان null دائماً هنا عمداً: المُشغِّل
+      // lectures_sheikh_guard() يملؤهما من sheikh_id، أو يُبقيهما فارغتين
+      // فيرث اللقاء شيخ سلسلته — لا يُحسبان يدوياً هنا (`docs/migration-003`)
+      sheikh_id: optionalUuid(body.sheikh_id, 'الشيخ'),
+      sheikh_name: null,
+      sheikh_slug: null,
+      scope_from: optionalText(body.scope_from, 'مقدار من'),
+      scope_to: optionalText(body.scope_to, 'مقدار إلى'),
     }
   } catch (e) {
     if (e instanceof ValidationError) return fail(e.message)
@@ -126,6 +140,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const msg = writeErr.message ?? ''
     if (msg.includes('lectures_duration_range')) return fail('المدة: بين ٥ و٦٠٠ دقيقة.', 422)
     if (msg.includes('lectures_ord_unique')) return fail('ترتيب مكرّر في السلسلة نفسها.', 422)
+    if (msg.includes('lectures_sheikh_id_fkey')) return fail('الشيخ المُختار غير موجود.', 422)
+    // مُشغِّل lectures_sheikh_guard() يرفع رسالته العربية جاهزة — تُمرَّر كما هي
+    if (msg.includes('لا شيخ فعّال لهذا اللقاء')) return fail(msg, 422)
     return fail('تعذّر حفظ التعديل. حاول مرة أخرى.', 503)
   }
 

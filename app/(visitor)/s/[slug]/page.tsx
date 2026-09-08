@@ -87,8 +87,14 @@ export default async function SeriesPage({
     byTime.find((l) => l.status === 'live') ?? byTime.find((l) => l.status === 'upcoming')
   const hero = featured ? toHeroVM(toLectureVM(featured, slugMap)) : null
 
-  // اسم الشيخ من أول لقاء — العرض يحمله محسوماً، فلا استعلام إضافي
-  const sheikhName = allVms[0]?.sheikhName ?? ''
+  // هجرة ٠٠٣: الشيخ صار قابلاً للتناوب داخل السلسلة الواحدة، فاسمه في
+  // الرأس لم يعد يُؤخذ من أول لقاء (كان يُضلِّل سلسلة كثيرة التناوب) —
+  // اسم واحد فقط إن اتّفقت عليه كل اللقاءات، وإلا فبلا اسم مفرد في الرأس
+  // (الجدول تحته يحمل عمود «الشيخ» حينها، انظر sheikhVaries أدناه).
+  const distinctSheikhs = new Set(allVms.map((v) => v.sheikhName))
+  const sheikhName = distinctSheikhs.size === 1 ? (allVms[0]?.sheikhName ?? '') : ''
+  const sheikhVaries = distinctSheikhs.size > 1
+  const hasScope = allVms.some((v) => v.scopeFrom || v.scopeTo)
 
   return (
     <VisitorApp
@@ -104,6 +110,8 @@ export default async function SeriesPage({
       serverNow={now}
       sheikhMode="navigate"
       showSeriesColumns={false}
+      showSheikhColumn={sheikhVaries}
+      showScopeColumns={hasScope}
       publicLink={{
         text: 'رابط هذه السلسلة للنشر:',
         path: `/s/${series.slug}`,

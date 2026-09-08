@@ -8,13 +8,17 @@ import { EmptyState, type EmptyKind } from './EmptyState'
 import { IcsButton } from './IcsButton'
 
 /**
- * جدول الزائر — ثمانية أعمدة موسّطة، منقول من النموذج المعتمد.
+ * جدول الزائر — منقول من النموذج المعتمد، ثمانية أعمدة أساساً.
  *
- * الترتيب · اللقاء (والكتاب تحته) · الشيخ · الموعد · النوع · الوجهة · العدّاد · زرّ التقويم
+ * الترتيب · اللقاء (والمقدار أو الكتاب تحته) · الشيخ · الموعد · النوع ·
+ * الوجهة · العدّاد · زرّ التقويم
  *
- * وفي صفحة السلسلة `/s/[slug]` يسقط عمودا «اللقاء» و«الشيخ» لأنهما ثابتان،
- * فتصير ستة. ولا يسقطان في `/sheikh/[slug]`: القسم ٥ خصّ السلسلة وحدها،
- * والنموذج نفسه لا يُسقطهما عند التصفية بالشيخ.
+ * وفي صفحة السلسلة `/s/[slug]` يسقط عمودا «اللقاء» دائماً (العنوان والكتاب
+ * ثابتان، ظاهران في رأس الصفحة) — لكن «الشيخ» و«من»/«إلى» صارا مستقلّين
+ * عنه (هجرة ٠٠٣ + استجواب ADR-0005): يظهر كلٌّ منهما فقط حين تحمل لقاءات
+ * هذه السلسلة تحديداً ما يستحقّ عرضه (شيخ متناوب، أو مقدار مملوء ولو
+ * لبعض اللقاءات) — تُمرَّر جاهزةً من الصفحة، لا تُحسَب هنا. ولا يسقط أيٌّ
+ * منها في `/sheikh/[slug]`: القسم ٥ خصّ السلسلة وحدها.
  *
  * الجدول يختفي دون ٩٦٠ بكسل وتحلّ محلّه البطاقات — بـ`@media` في الورقة
  * لا بقياس عرض في JavaScript، فلا وميض ولا اختلاف بين الخادم والمتصفح.
@@ -23,14 +27,23 @@ export function LectureTable({
   rows,
   emptyKind: kind,
   showSeriesColumns = true,
+  showSheikhColumn,
+  showScopeColumns = false,
 }: {
   rows: LectureVM[]
   emptyKind: EmptyKind
   showSeriesColumns?: boolean
+  /** افتراضياً يتبع showSeriesColumns (سلوك اليوم) — صفحة السلسلة تفصلهما */
+  showSheikhColumn?: boolean
+  /** عمودا «من»/«إلى» المستقلّان — صفحة السلسلة وحدها تُمرّره */
+  showScopeColumns?: boolean
 }) {
+  const sheikhOn = showSheikhColumn ?? showSeriesColumns
+
   // ⚠️ يُحسب قبل فحص الفراغ: النموذج يعود مبكّراً عند الفراغ فتبقى ترويستا
-  // العمودين على حالتهما السابقة، ويبقى colspan ثمانية في جدول من ستة أعمدة.
-  const colSpan = showSeriesColumns ? 8 : 6
+  // الأعمدة على حالتها السابقة، ويبقى colspan متوافقاً مع رأس الجدول.
+  const colSpan =
+    6 + (showSeriesColumns ? 1 : 0) + (sheikhOn ? 1 : 0) + (showScopeColumns ? 2 : 0)
 
   return (
     // `.noseries` يفعّل شطب عمود «الموعد» للملغى، إذ لا عمود عنوان هنا يحمله
@@ -39,8 +52,14 @@ export function LectureTable({
         <thead>
           <tr>
             <th className="c-ord">الترتيب</th>
+            {showScopeColumns ? (
+              <>
+                <th>من</th>
+                <th>إلى</th>
+              </>
+            ) : null}
             {showSeriesColumns ? <th id="thLec">اللقاء</th> : null}
-            {showSeriesColumns ? <th id="thSh">الشيخ</th> : null}
+            {sheikhOn ? <th id="thSh">الشيخ</th> : null}
             <th className="c-when">الموعد</th>
             <th className="c-type">النوع</th>
             <th>الوجهة</th>
@@ -60,6 +79,13 @@ export function LectureTable({
               <tr key={vm.id} className={vm.rowClass}>
                 <td className="ord">{vm.ordAr}</td>
 
+                {showScopeColumns ? (
+                  <>
+                    <td>{vm.scopeFrom}</td>
+                    <td>{vm.scopeTo}</td>
+                  </>
+                ) : null}
+
                 {showSeriesColumns ? (
                   <td className="title">
                     {/*
@@ -77,11 +103,11 @@ export function LectureTable({
                     ) : (
                       <b>{vm.title}</b>
                     )}
-                    {vm.book ? <span>{vm.book}</span> : null}
+                    {vm.scopeLine ? <span>{vm.scopeLine}</span> : null}
                   </td>
                 ) : null}
 
-                {showSeriesColumns ? (
+                {sheikhOn ? (
                   <td>
                     <Link className="sheikh" href={`/sheikh/${vm.sheikhSlug}`}>
                       {vm.sheikhName}

@@ -19,9 +19,10 @@ import { parseImportRows, type ImportRow, type RowIssue } from '@/lib/server/exc
  * المرحلتان: (١) تحقّق الملف كاملاً بلا أي كتابة — `parseImportRows` ثم
  * فحصا قاعدة بيانات دفعيّان (الروابط غير مكرَّرة، المشايخ موجودون
  * ونشطون)؛ أي خطأ في أي مكان ⇐ لا يُكتَب شيء. (٢) بعد نجاح الملف كاملاً:
- * إدخال كل مجموعة سلسلة بنمط `app/api/admin/series/route.ts` تماماً —
- * لقطة الشيخ، ثم اللقاءات مرتَّبة بالتاريخ، وحذف تعويضي للسلسلة إن فشل
- * إدخال لقاءاتها.
+ * إدخال كل مجموعة سلسلة — **بلا** لقطة شيخ على السلسلة نفسها (هجرة ٠٠٣:
+ * تبقى `series.sheikh_*` فارغة دائماً عند الاستيراد)، ثم اللقاءات مرتَّبة
+ * بالتاريخ وكلٌّ منها بلقطة شيخه الخاص، وحذف تعويضي للسلسلة إن فشل إدخال
+ * لقاءاتها.
  */
 
 export const dynamic = 'force-dynamic'
@@ -38,13 +39,15 @@ const col = {
   title: 2,
   book: 3,
   sheikhSlug: 4,
-  type: 5,
-  place: 6,
-  mapUrl: 7,
-  joinUrl: 8,
-  duration: 9,
-  date: 10,
-  time: 11,
+  scopeFrom: 5,
+  scopeTo: 6,
+  type: 7,
+  place: 8,
+  mapUrl: 9,
+  joinUrl: 10,
+  duration: 11,
+  date: 12,
+  time: 13,
 } as const
 
 function cellRaw(cell: ExcelJS.Cell): unknown {
@@ -127,6 +130,8 @@ export async function POST(request: Request) {
       title: cellRaw(row.getCell(col.title)),
       book: cellRaw(row.getCell(col.book)),
       sheikhSlug: cellRaw(row.getCell(col.sheikhSlug)),
+      scopeFrom: cellRaw(row.getCell(col.scopeFrom)),
+      scopeTo: cellRaw(row.getCell(col.scopeTo)),
       typeLabel: cellRaw(row.getCell(col.type)),
       place: cellRaw(row.getCell(col.place)),
       mapUrl: cellRaw(row.getCell(col.mapUrl)),
@@ -187,7 +192,9 @@ export async function POST(request: Request) {
       }
     }
 
-    const sheikhSlugs = [...new Set(groups.map((g) => g.sheikhSlug))]
+    // هجرة ٠٠٣: الشيخ لكل لقاء لا لكل مجموعة — فالفحص يشمل **كل** رابط شيخ
+    // ظهر في الملف، لا شيخاً واحداً ممثّلاً عن كل سلسلة.
+    const sheikhSlugs = [...new Set(groups.flatMap((g) => g.lectures.map((l) => l.sheikhSlug)))]
     const { data: sheikhRows, error: sheikhLookupErr } = await supabaseAdmin
       .from('sheikhs')
       .select('id, name, slug, is_active')
@@ -200,14 +207,16 @@ export async function POST(request: Request) {
     }
 
     for (const g of groups) {
-      const sh = sheikhBySlug.get(g.sheikhSlug)
-      if (!sh) {
-        issues.push({ row: g.firstRow, message: `الشيخ برابط «${g.sheikhSlug}» غير موجود.` })
-      } else if (!sh.is_active) {
-        issues.push({
-          row: g.firstRow,
-          message: `الشيخ «${sh.name}» (${g.sheikhSlug}) غير نشط، فلا تُنشأ له سلسلة جديدة.`,
-        })
+      for (const l of g.lectures) {
+        const sh = sheikhBySlug.get(l.sheikhSlug)
+        if (!sh) {
+          issues.push({ row: l.row, message: `الشيخ برابط «${l.sheikhSlug}» غير موجود.` })
+        } else if (!sh.is_active) {
+          issues.push({
+            row: l.row,
+            message: `الشيخ «${sh.name}» (${l.sheikhSlug}) غير نشط، فلا يُستعمَل في استيراد جديد.`,
+          })
+        }
       }
     }
   }
@@ -225,17 +234,15 @@ export async function POST(request: Request) {
   const failed: { slug: string; message: string }[] = []
 
   for (const g of groups) {
-    const sh = sheikhBySlug.get(g.sheikhSlug)!
-
+    // الشيخ الافتراضي على السلسلة يبقى فارغاً دائماً عند الاستيراد (قرار
+    // محسوم، هجرة ٠٠٣) — كل لقاء يحمل شيخه الخاص أدناه، ولو تكرّر الرابط
+    // نفسه على كل لقاءات السلسلة. لا تخمين لشيخ مشترك يُرقّى إلى السلسلة.
     const { data: newSeries, error: seriesErr } = await supabaseAdmin
       .from('series')
       .insert({
         title: g.title,
         slug: g.slug,
         book: g.book,
-        sheikh_id: sh.id,
-        sheikh_name: sh.name,
-        sheikh_slug: sh.slug,
         type: g.type,
         place: g.place,
         map_url: g.mapUrl,
@@ -250,11 +257,19 @@ export async function POST(request: Request) {
       continue
     }
 
-    const lectureRows = g.lectures.map((l, i) => ({
-      series_id: newSeries.id,
-      ord: i + 1,
-      starts_at: l.startsAt,
-    }))
+    const lectureRows = g.lectures.map((l, i) => {
+      const sh = sheikhBySlug.get(l.sheikhSlug)!
+      return {
+        series_id: newSeries.id,
+        ord: i + 1,
+        starts_at: l.startsAt,
+        sheikh_id: sh.id,
+        sheikh_name: sh.name,
+        sheikh_slug: sh.slug,
+        scope_from: l.scopeFrom,
+        scope_to: l.scopeTo,
+      }
+    })
 
     const { error: lecErr } = await supabaseAdmin.from('lectures').insert(lectureRows)
 

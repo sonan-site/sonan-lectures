@@ -71,6 +71,11 @@ async function cleanup() {
 }
 
 await cleanup()
+// لا يُفترَض عدد ثابت للزرع (قد يكون حُذف أو أُعيد زرعه) — يُقاس قبل
+// وبعد بدلاً من افتراض رقم معيّن، فيبقى الفحص صحيحاً في الحالتين.
+const { count: baselineLectures } = await db
+  .from('lectures')
+  .select('id', { count: 'exact', head: true })
 
 // ═══ ٠ · الحارس بلا جلسة على المسارات الثلاثة ═══════════════
 console.log(head('الحارس · القاعدة ٦.٥'))
@@ -123,7 +128,8 @@ expect(sheetNames.includes('تعليمات'), 'تحوي ورقة التعليم�
 console.log(head('استيراد ملف صالح'))
 
 const HEADERS = [
-  'رابط السلسلة', 'عنوان اللقاء', 'الكتاب', 'رابط الشيخ', 'النوع',
+  'رابط السلسلة', 'عنوان اللقاء', 'الكتاب', 'رابط الشيخ',
+  'مقدار اللقاء — من', 'مقدار اللقاء — إلى', 'النوع',
   'المكان', 'رابط الخرائط', 'رابط الدخول', 'المدة بالدقيقة',
   'تاريخ اللقاء', 'وقت اللقاء',
 ]
@@ -146,11 +152,11 @@ const slugB = `${TAG}-b`
 const sheikhSlug = `${TAG}-sheikh`
 
 const goodRows = [
-  [slugA, 'سلسلة الفحص أ', 'كتاب أ', sheikhSlug, 'حضوري', 'قاعة الفحص', '', '', 60, day(10), '19:00'],
-  [slugA, 'سلسلة الفحص أ', 'كتاب أ', sheikhSlug, 'حضوري', 'قاعة الفحص', '', '', 60, day(17), '19:00'],
-  [slugA, 'سلسلة الفحص أ', 'كتاب أ', sheikhSlug, 'حضوري', 'قاعة الفحص', '', '', 60, day(24), '19:00'],
-  [slugB, 'سلسلة الفحص ب', '', sheikhSlug, 'عن بُعد', '', '', 'https://meet.example/fahs', 45, day(11), '20:30'],
-  [slugB, 'سلسلة الفحص ب', '', sheikhSlug, 'عن بُعد', '', '', 'https://meet.example/fahs', 45, day(18), '20:30'],
+  [slugA, 'سلسلة الفحص أ', 'كتاب أ', sheikhSlug, 'باب الفحص الأول', 'باب الفحص الثاني', 'حضوري', 'قاعة الفحص', '', '', 60, day(10), '19:00'],
+  [slugA, 'سلسلة الفحص أ', 'كتاب أ', sheikhSlug, '', '', 'حضوري', 'قاعة الفحص', '', '', 60, day(17), '19:00'],
+  [slugA, 'سلسلة الفحص أ', 'كتاب أ', sheikhSlug, '', '', 'حضوري', 'قاعة الفحص', '', '', 60, day(24), '19:00'],
+  [slugB, 'سلسلة الفحص ب', '', sheikhSlug, '', '', 'عن بُعد', '', '', 'https://meet.example/fahs', 45, day(11), '20:30'],
+  [slugB, 'سلسلة الفحص ب', '', sheikhSlug, '', '', 'عن بُعد', '', '', 'https://meet.example/fahs', 45, day(18), '20:30'],
 ]
 
 const goodBuf = await buildWorkbook(goodRows).xlsx.writeBuffer()
@@ -160,11 +166,27 @@ expect(good.json?.created?.length === 2, `سلسلتان أُنشئتا (${good.
 expect(good.json?.totalLectures === 5, `خمسة لقاءات إجمالاً (${good.json?.totalLectures})`)
 console.log(dim(`  ${(good.json?.created ?? []).map((c) => `${c.slug}:${c.count}`).join(' · ')}`))
 
-const { count: dbCountA } = await db
+const seriesA = await db.from('series').select('id, sheikh_id, sheikh_name').eq('slug', slugA).single()
+expect(seriesA.data?.sheikh_id === null, 'سلسلة أ بلا شيخ افتراضي — الاستيراد لا يُرقّي شيخاً مشتركاً للسلسلة')
+
+const { count: dbCountA, data: lecturesA } = await db
   .from('lectures')
-  .select('id', { count: 'exact', head: true })
-  .eq('series_id', (await db.from('series').select('id').eq('slug', slugA).single()).data?.id)
+  .select('id, sheikh_id, scope_from, scope_to', { count: 'exact' })
+  .eq('series_id', seriesA.data?.id)
+  .order('ord', { ascending: true })
 expect(dbCountA === 3, `سلسلة أ فيها ٣ لقاءات في القاعدة فعلاً (${dbCountA})`)
+expect(
+  (lecturesA ?? []).every((l) => l.sheikh_id !== null),
+  'كل لقاء في سلسلة أ يحمل شيخه الخاص (لا سلسلته)'
+)
+expect(
+  lecturesA?.[0]?.scope_from === 'باب الفحص الأول' && lecturesA?.[0]?.scope_to === 'باب الفحص الثاني',
+  'مقدار اللقاء الأول استُورد صحيحاً'
+)
+expect(
+  lecturesA?.[1]?.scope_from === null && lecturesA?.[1]?.scope_to === null,
+  'مقدار اللقاء الثاني فارغ كما تُرك في الملف'
+)
 
 // ═══ ٥ · إعادة رفع الملف نفسه — يُرفض بسبب تكرار الروابط ═══════
 console.log(head('إعادة الرفع · روابط مكرَّرة'))
@@ -191,27 +213,29 @@ const slugC = `${TAG}-c` // شيخ غير موجود
 const slugD = `${TAG}-d` // مدة خارج المدى
 const slugE = `${TAG}-e` // عدم تطابق العنوان بين صفوف الرابط نفسه
 const slugF = `${TAG}-f` // تاريخ ووقت مكرَّران داخل السلسلة نفسها
+const slugG = `${TAG}-g` // رابط الشيخ فارغ — إلزاميّ لكل صفّ منذ هجرة ٠٠٣
 const badRows = [
-  [slugC, 'سلسلة الفحص ج', '', 'la-yujad-abadan', 'حضوري', 'مكان', '', '', 60, day(12), '19:00'],
-  [slugD, 'سلسلة الفحص د', '', sheikhSlug, 'حضوري', 'مكان', '', '', 999, day(13), '19:00'],
-  [slugE, 'سلسلة الفحص هـ', '', sheikhSlug, 'حضوري', 'مكان', '', '', 60, day(14), '19:00'],
-  [slugE, 'عنوان مختلف تماماً', '', sheikhSlug, 'حضوري', 'مكان', '', '', 60, day(21), '19:00'],
-  [slugF, 'سلسلة الفحص و', '', sheikhSlug, 'حضوري', 'مكان', '', '', 60, day(15), '19:00'],
-  [slugF, 'سلسلة الفحص و', '', sheikhSlug, 'حضوري', 'مكان', '', '', 60, day(15), '19:00'],
+  [slugC, 'سلسلة الفحص ج', '', 'la-yujad-abadan', '', '', 'حضوري', 'مكان', '', '', 60, day(12), '19:00'],
+  [slugD, 'سلسلة الفحص د', '', sheikhSlug, '', '', 'حضوري', 'مكان', '', '', 999, day(13), '19:00'],
+  [slugE, 'سلسلة الفحص هـ', '', sheikhSlug, '', '', 'حضوري', 'مكان', '', '', 60, day(14), '19:00'],
+  [slugE, 'عنوان مختلف تماماً', '', sheikhSlug, '', '', 'حضوري', 'مكان', '', '', 60, day(21), '19:00'],
+  [slugF, 'سلسلة الفحص و', '', sheikhSlug, '', '', 'حضوري', 'مكان', '', '', 60, day(15), '19:00'],
+  [slugF, 'سلسلة الفحص و', '', sheikhSlug, '', '', 'حضوري', 'مكان', '', '', 60, day(15), '19:00'],
+  [slugG, 'سلسلة الفحص ز', '', '', '', '', 'حضوري', 'مكان', '', '', 60, day(16), '19:00'],
 ]
 const badBuf = await buildWorkbook(badRows).xlsx.writeBuffer()
 const bad = await upload('/api/admin/series/import', badBuf, 'bad.xlsx')
 expect(bad.status === 422, `يُرفض ٤٢٢ (${bad.status})`)
 expect(
-  (bad.json?.issues ?? []).length >= 4,
-  `أربعة أخطاء مستقلّة على الأقل مجموعة معاً (${bad.json?.issues?.length})`
+  (bad.json?.issues ?? []).length >= 5,
+  `خمسة أخطاء مستقلّة على الأقل مجموعة معاً (${bad.json?.issues?.length})`
 )
 console.log(dim('  ' + (bad.json?.issues ?? []).map((i) => `صف ${i.row}: ${i.message}`).join('\n  ')))
 
 const { count: noBad } = await db
   .from('series')
   .select('id', { count: 'exact', head: true })
-  .in('slug', [slugC, slugD, slugE, slugF])
+  .in('slug', [slugC, slugD, slugE, slugF, slugG])
 expect(noBad === 0, 'لا سلسلة واحدة من الملف الفاسد كُتبت — ولو جزئياً')
 
 // ═══ ٧ · التصدير ═════════════════════════════════════════════
@@ -223,12 +247,18 @@ await expWb.xlsx.load(exp.buf)
 const expNames = expWb.worksheets.map((s) => s.name)
 expect(expNames.includes('السلاسل') && expNames.includes('اللقاءات'), `ورقتان صحيحتان (${expNames.join('،')})`)
 const lecSheet = expWb.getWorksheet('اللقاءات')
-expect(lecSheet.rowCount > 15, `صفوف اللقاءات تشمل الزرع والفحص (${lecSheet.rowCount})`)
+// ٥ لقاءات الفحص (الخطوة ٤) ما زالت في القاعدة هنا — التنظيف يقع بعدها
+expect(lecSheet.rowCount >= 6, `صفوف اللقاءات تشمل رأساً و٥ لقاءات الفحص على الأقل (${lecSheet.rowCount})`)
+const scopeFromCol = lecSheet.getRow(1).values.indexOf('مقدار اللقاء — من')
+expect(scopeFromCol > 0, 'عمود «مقدار اللقاء — من» موجود في ورقة التصدير')
 
 // ═══ التنظيف ══════════════════════════════════════════════════
 await cleanup()
-const { count: seedN } = await db.from('lectures').select('id', { count: 'exact', head: true })
-expect(seedN === 15, `الزرع لم يُمسّ — ١٥ لقاءً كما هو (${seedN})`)
+const { count: afterLectures } = await db.from('lectures').select('id', { count: 'exact', head: true })
+expect(
+  afterLectures === baselineLectures,
+  `ما كان موجوداً قبل الفحص لم يُمسّ (${baselineLectures} قبل، ${afterLectures} بعد)`
+)
 
 console.log('\n' + '═'.repeat(58))
 console.log(

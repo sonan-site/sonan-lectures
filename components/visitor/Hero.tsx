@@ -36,7 +36,7 @@ export function Hero({ vm }: { vm: HeroVM | null }) {
       <div className="wrap">
         <div className="eyebrow">{live ? 'يُبثّ الآن' : 'اللقاء القادم'}</div>
         <h1>{vm.title}</h1>
-        {vm.book ? <div className="book">{vm.book}</div> : null}
+        {vm.scopeLine ? <div className="book">{vm.scopeLine}</div> : null}
         <div className="meta">
           {vm.sheikhName}
           <i>·</i>

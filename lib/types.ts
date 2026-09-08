@@ -48,6 +48,12 @@ export interface LectureView {
   join_url: string | null
   is_cancelled: boolean
   status: LectureStatus
+  /**
+   * مقدار الشرح لهذا اللقاء تحديداً — بلا وراثة إطلاقاً (هجرة ٠٠٣).
+   * السلسلة لا تملك نظيراً لهذين الحقلين، فالفراغ يعني فراغاً حقيقياً.
+   */
+  scope_from: string | null
+  scope_to: string | null
 }
 
 export interface Sheikh {
@@ -63,9 +69,13 @@ export interface Series {
   book: string | null
   /** مرجع القالب — `null` إن حُذف الشيخ من القائمة */
   sheikh_id: string | null
-  /** لقطة الاسم والرابط — النموذج القالبي (هجرة ٠٠٢) */
-  sheikh_name: string
-  sheikh_slug: string
+  /**
+   * لقطة الاسم والرابط — النموذج القالبي (هجرة ٠٠٢)، **قابلة للفراغ**
+   * منذ هجرة ٠٠٣: سلسلة تناوب كامل (كل لقاء بشيخه الخاص) لا شيخ
+   * افتراضي لها إطلاقاً. لا تُستعمل مباشرة كنصّ بلا فحص فراغ أولاً.
+   */
+  sheikh_name: string | null
+  sheikh_slug: string | null
   /** غير `null` ⇐ مؤرشفة: تختفي عن الزائر وتبقى في اللوحة */
   archived_at: string | null
   type: LectureType

@@ -52,6 +52,13 @@ interface RawLectureRow {
   join_url: string | null
   is_cancelled: boolean
   archived_at: string | null
+  /** الشيخ المُتجاوِز على هذا اللقاء تحديداً — `null` يعني وارثاً (هجرة ٠٠٣) */
+  sheikh_id: string | null
+  sheikh_name: string | null
+  sheikh_slug: string | null
+  /** مقدار هذا اللقاء — بلا وراثة إطلاقاً، لا نظير له على السلسلة (هجرة ٠٠٣) */
+  scope_from: string | null
+  scope_to: string | null
   series: RawSeries
 }
 
@@ -65,11 +72,15 @@ interface RawSeries {
   map_url: string | null
   join_url: string | null
   duration_min: number
-  /** `null` إن حُذف الشيخ من قائمة القوالب — لا يُعتمد عليه في العرض */
+  /** `null` إن حُذف الشيخ من قائمة القوالب، أو إن لم يكن لها شيخ افتراضي أصلاً */
   sheikh_id: string | null
-  /** اللقطة: هي مصدر الاسم المعروض، لا جدول المشايخ */
-  sheikh_name: string
-  sheikh_slug: string
+  /**
+   * اللقطة — قد تكون `null` منذ هجرة ٠٠٣: سلسلة تناوب كامل (كل لقاء بشيخه
+   * الخاص) لا شيخ افتراضي لها إطلاقاً، لا قالباً محذوفاً. الفرق بينهما في
+   * `sheikh_id` وحده — انظر `sheikhTemplateGone` أدناه.
+   */
+  sheikh_name: string | null
+  sheikh_slug: string | null
   archived_at: string | null
 }
 
@@ -79,7 +90,22 @@ export interface AdminLectureVM {
   seriesId: string
   seriesTitle: string
   seriesBook: string | null
+  /** الفعّال بعد التغليب (لقاء فسلسلة) — للعرض المباشر */
   sheikhName: string
+
+  /** التجاوز كما هو على اللقاء: `null` يعني وارثاً */
+  ovSheikhId: string | null
+  /** الفحص الصحيح لـ«هل الشيخ متجاوَز؟» — لا `ovSheikhId` (مرجع قد يُفرَّغ بحذف القالب وتبقى اللقطة) */
+  ovSheikhName: string | null
+  /** ما يرثه من السلسلة — `null` إن كانت السلسلة بلا شيخ افتراضي (تناوب كامل) */
+  inhSheikhName: string | null
+
+  /** مقدار هذا اللقاء — بلا وراثة، لا نظير له على السلسلة */
+  scopeFrom: string | null
+  scopeTo: string | null
+  /** أحد حقلَي المقدار مملوء على الأقل — شارة "المقدار" المستقلّة */
+  hasScope: boolean
+
   ordAr: string
 
   /** نصوص العرض */
@@ -140,7 +166,7 @@ export interface AdminSeriesVM {
   sheikhTemplateGone: boolean
 }
 
-/** صفّ الشيخ في تبويب المشايخ — بعدد سلاسله */
+/** صفّ الشيخ في تبويب المشايخ — بعدد سلاسله ولقاءاته المتجاوِزة */
 export interface AdminSheikhVM {
   id: string
   name: string
@@ -148,6 +174,9 @@ export interface AdminSheikhVM {
   isActive: boolean
   seriesCount: number
   seriesCountAr: string
+  /** لقاءات تتجاوز عليه مباشرة (لا عبر سلسلة) — تذكرها نافذة الحذف أيضاً */
+  overriddenLectureCount: number
+  overriddenLectureCountAr: string
 }
 
 export interface AdminData {
@@ -168,7 +197,7 @@ export async function getAdminData(): Promise<AdminData> {
       .from('lectures')
       .select(
         'id, series_id, ord, starts_at, duration_min, type, place, map_url, join_url,' +
-          ' is_cancelled, archived_at,' +
+          ' is_cancelled, archived_at, sheikh_id, sheikh_name, sheikh_slug, scope_from, scope_to,' +
           ' series:series_id (id, title, book, slug, type, place, map_url, join_url,' +
           ' duration_min, sheikh_id, sheikh_name, sheikh_slug, archived_at)'
       )
@@ -194,8 +223,17 @@ export async function getAdminData(): Promise<AdminData> {
   const rawRows = (rawRes.data ?? []) as unknown as RawLectureRow[]
 
   const counts = new Map<string, number>()
+  // توزيع الشيخ الفعّال عبر لقاءات كل سلسلة — يُستعمَل حصراً لسلاسل بلا
+  // شيخ افتراضي (تناوب كامل) لحساب «يتناوب (Nشيخاً)» أدناه.
+  const sheikhNamesBySeriesId = new Map<string, Set<string>>()
   for (const row of rawRows) {
     counts.set(row.series_id, (counts.get(row.series_id) ?? 0) + 1)
+    const effName = row.sheikh_name ?? row.series.sheikh_name
+    if (effName) {
+      const set = sheikhNamesBySeriesId.get(row.series_id) ?? new Set<string>()
+      set.add(effName)
+      sheikhNamesBySeriesId.set(row.series_id, set)
+    }
   }
 
   const lectures: AdminLectureVM[] = rawRows.map((row) => {
@@ -206,17 +244,30 @@ export async function getAdminData(): Promise<AdminData> {
     const ovType = row.type
     const ovPlace = row.place
     const ovJoinUrl = row.join_url
+    const ovSheikhId = row.sheikh_id
+    const ovSheikhName = row.sheikh_name
 
     const effDuration = ovDuration ?? s.duration_min
     const effType = ovType ?? s.type
+    const scopeFrom = row.scope_from
+    const scopeTo = row.scope_to
 
     return {
       id: row.id,
       seriesId: s.id,
       seriesTitle: s.title,
       seriesBook: s.book,
-      // من اللقطة لا من جدول القوالب — يبقى صحيحاً بعد حذف الشيخ منه
-      sheikhName: s.sheikh_name,
+      // الفعّال بعد التغليب: تجاوز اللقاء أولاً، ثم لقطة السلسلة
+      sheikhName: ovSheikhName ?? s.sheikh_name ?? '',
+
+      ovSheikhId,
+      ovSheikhName,
+      inhSheikhName: s.sheikh_name,
+
+      scopeFrom,
+      scopeTo,
+      hasScope: Boolean(scopeFrom || scopeTo),
+
       ordAr: arNum(row.ord),
 
       hijri: hijriDate(starts),
@@ -245,7 +296,9 @@ export async function getAdminData(): Promise<AdminData> {
       isCancelled: row.is_cancelled,
       isArchived: row.archived_at !== null,
       seriesArchived: s.archived_at !== null,
-      isOverridden: Boolean(ovDuration || ovType || ovPlace || ovJoinUrl),
+      // ovSheikhName لا ovSheikhId: مرجع قد يُفرَّغ بحذف قالب الشيخ وتبقى
+      // اللقطة صحيحة — فحص المرجع وحده كان سيُخفي تجاوزاً حقيقياً.
+      isOverridden: Boolean(ovDuration || ovType || ovPlace || ovJoinUrl || ovSheikhName),
 
       status: statusById.get(row.id) ?? 'upcoming',
       statusLabel: STATUS_LABEL[statusById.get(row.id) ?? 'upcoming'],
@@ -266,20 +319,34 @@ export async function getAdminData(): Promise<AdminData> {
 
   const seriesRows = (allSeries ?? []) as unknown as RawSeries[]
 
-  const series: AdminSeriesVM[] = seriesRows.map((s) => ({
-    id: s.id,
-    title: s.title,
-    book: s.book,
-    slug: s.slug,
-    sheikhName: s.sheikh_name,
-    type: s.type,
-    typeLabel: TYPE_LABEL[s.type],
-    typeClass: TYPE_CLASS[s.type],
-    count: counts.get(s.id) ?? 0,
-    countAr: arNum(counts.get(s.id) ?? 0),
-    isArchived: s.archived_at !== null,
-    sheikhTemplateGone: s.sheikh_id === null,
-  }))
+  const series: AdminSeriesVM[] = seriesRows.map((s) => {
+    // لا شيخ افتراضي (تناوب كامل، هجرة ٠٠٣) ⇐ يُحسَب اسم العرض من توزيع
+    // لقاءاتها الفعلي، لا من عمود لا قيمة فيه. هذا عرض إداري وحده، ليس في
+    // ADR-0005 نفسها.
+    let sheikhName = s.sheikh_name ?? ''
+    if (s.sheikh_name === null) {
+      const distinct = [...(sheikhNamesBySeriesId.get(s.id) ?? [])]
+      sheikhName = distinct.length === 1 ? distinct[0] : `يتناوب (${arNum(distinct.length)}شيخاً)`
+    }
+
+    return {
+      id: s.id,
+      title: s.title,
+      book: s.book,
+      slug: s.slug,
+      sheikhName,
+      type: s.type,
+      typeLabel: TYPE_LABEL[s.type],
+      typeClass: TYPE_CLASS[s.type],
+      count: counts.get(s.id) ?? 0,
+      countAr: arNum(counts.get(s.id) ?? 0),
+      isArchived: s.archived_at !== null,
+      // ثلاث حالات: شيخ حاضر (كلاهما غير فارغ) · قالب محذوف واللقطة باقية
+      // (sheikh_id فارغ وsheikh_name باقٍ) · لا شيخ افتراضي أصلاً (كلاهما
+      // فارغ، تناوب كامل) — هذه الأخيرة ليست «قالباً محذوفاً» فلا تُوسَم به.
+      sheikhTemplateGone: s.sheikh_id === null && s.sheikh_name !== null,
+    }
+  })
 
   // عدد سلاسل كل شيخ — من قائمة السلاسل الكاملة لا من اللقاءات
   // يُعدّ بالمرجع لا باللقطة: العدد يجيب «كم سلسلة ما زالت مرتبطة بهذا القالب»
@@ -291,8 +358,17 @@ export async function getAdminData(): Promise<AdminData> {
     seriesPerSheikh.set(sid, (seriesPerSheikh.get(sid) ?? 0) + 1)
   }
 
+  // لقاءات تتجاوز على هذا الشيخ مباشرة — منفصل عن seriesPerSheikh لأن حذف
+  // القالب لا يمسّ اللقطة في أيّهما، لكن نافذة الحذف تذكر الاثنين معاً
+  const overriddenLecturesPerSheikh = new Map<string, number>()
+  for (const l of lectures) {
+    if (!l.ovSheikhId) continue
+    overriddenLecturesPerSheikh.set(l.ovSheikhId, (overriddenLecturesPerSheikh.get(l.ovSheikhId) ?? 0) + 1)
+  }
+
   const allSheikhs: AdminSheikhVM[] = (sheikhRes.data ?? []).map((s) => {
     const n = seriesPerSheikh.get(s.id as string) ?? 0
+    const m = overriddenLecturesPerSheikh.get(s.id as string) ?? 0
     return {
       id: s.id as string,
       name: s.name as string,
@@ -300,6 +376,8 @@ export async function getAdminData(): Promise<AdminData> {
       isActive: s.is_active as boolean,
       seriesCount: n,
       seriesCountAr: arNum(n),
+      overriddenLectureCount: m,
+      overriddenLectureCountAr: arNum(m),
     }
   })
 

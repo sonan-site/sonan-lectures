@@ -36,9 +36,9 @@ function LectureDetail({ vm }: { vm: LectureVM }) {
       >
         {vm.title}
       </b>
-      {vm.book ? (
+      {vm.scopeLine ? (
         <div style={{ fontSize: 12, color: 'var(--warm)', fontWeight: 500, marginTop: 3 }}>
-          {vm.book}
+          {vm.scopeLine}
         </div>
       ) : null}
 

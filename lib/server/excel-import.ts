@@ -32,7 +32,10 @@ export interface ImportRow {
   seriesSlug: unknown
   title: unknown
   book: unknown
+  /** شيخ هذا اللقاء تحديداً — لكل صفّ، لا ثابت على مستوى المجموعة (هجرة ٠٠٣) */
   sheikhSlug: unknown
+  scopeFrom: unknown
+  scopeTo: unknown
   typeLabel: unknown
   place: unknown
   mapUrl: unknown
@@ -50,6 +53,9 @@ export interface RowIssue {
 export interface ImportLecture {
   row: number
   startsAt: string
+  sheikhSlug: string
+  scopeFrom: string | null
+  scopeTo: string | null
 }
 
 /** مجموعة سلسلة صالحة — جاهزة للإدخال في قاعدة البيانات */
@@ -59,7 +65,6 @@ export interface ValidSeriesGroup {
   slug: string
   title: string
   book: string | null
-  sheikhSlug: string
   type: LectureType
   place: string | null
   mapUrl: string | null
@@ -83,11 +88,14 @@ function typeFromLabel(v: unknown): LectureType {
   return type
 }
 
-/** الحقول الثابتة على مستوى السلسلة — يجب أن تتطابق على كل صفوف الرابط نفسه */
+/**
+ * الحقول الثابتة على مستوى السلسلة — يجب أن تتطابق على كل صفوف الرابط نفسه.
+ * «رابط الشيخ» و«مقدار من/إلى» **ليست هنا عمداً** (هجرة ٠٠٣): تخصّ كل لقاء
+ * وحده، وتختلف حرّةً بين صفوف السلسلة الواحدة (خلاف الكتاب والعنوان).
+ */
 const SHARED_FIELDS: { key: keyof ImportRow; label: string }[] = [
   { key: 'title', label: 'عنوان اللقاء' },
   { key: 'book', label: 'الكتاب' },
-  { key: 'sheikhSlug', label: 'رابط الشيخ' },
   { key: 'typeLabel', label: 'النوع' },
   { key: 'place', label: 'المكان' },
   { key: 'mapUrl', label: 'رابط الخرائط' },
@@ -153,7 +161,7 @@ export function parseImportRows(rows: ImportRow[]): {
     if (!consistent) continue
 
     const head = groupRows[0]
-    let title: string, book: string | null, sheikhSlug: string
+    let title: string, book: string | null
     let type: LectureType, place: string | null, mapUrl: string | null, joinUrl: string | null
     let durationMin: number
     let headOk = true
@@ -171,13 +179,6 @@ export function parseImportRows(rows: ImportRow[]): {
       push(firstRow, e instanceof ValidationError ? e.message : 'الكتاب: قيمة غير صالحة.')
       headOk = false
       book = null
-    }
-    try {
-      sheikhSlug = requiredSlug(head.sheikhSlug, 'رابط الشيخ')
-    } catch (e) {
-      push(firstRow, e instanceof ValidationError ? e.message : 'رابط الشيخ: قيمة غير صالحة.')
-      headOk = false
-      sheikhSlug = ''
     }
     try {
       type = typeFromLabel(head.typeLabel)
@@ -222,7 +223,7 @@ export function parseImportRows(rows: ImportRow[]): {
       headOk = false
     }
 
-    // ---------- كل لقاء: التاريخ والوقت ----------
+    // ---------- كل لقاء: التاريخ والوقت وشيخه ومقداره — حقول اللقاء وحده ----------
     const lectures: ImportLecture[] = []
     const seenInstants = new Map<string, number>()
     let lecturesOk = true
@@ -242,8 +243,37 @@ export function parseImportRows(rows: ImportRow[]): {
         lecturesOk = false
         continue
       }
+
+      // رابط الشيخ إلزاميّ لكل صفّ: السلسلة المستورَدة لا تكسب شيخاً افتراضياً
+      // أبداً (قرار محسوم — كل لقاء يحمل شيخه صراحةً، مطابقةً للملف الحقيقي
+      // المُرفَق حتى لو تكرّر الرابط نفسه في كل صفوف السلسلة).
+      let rowSheikhSlug: string
+      try {
+        rowSheikhSlug = requiredSlug(r.sheikhSlug, 'رابط الشيخ')
+      } catch (e) {
+        push(r.row, e instanceof ValidationError ? e.message : 'رابط الشيخ: قيمة غير صالحة.')
+        lecturesOk = false
+        continue
+      }
+
+      let rowScopeFrom: string | null, rowScopeTo: string | null
+      try {
+        rowScopeFrom = optionalText(r.scopeFrom, 'مقدار من', 300)
+        rowScopeTo = optionalText(r.scopeTo, 'مقدار إلى', 300)
+      } catch (e) {
+        push(r.row, e instanceof ValidationError ? e.message : 'المقدار: قيمة غير صالحة.')
+        lecturesOk = false
+        continue
+      }
+
       seenInstants.set(startsAt, r.row)
-      lectures.push({ row: r.row, startsAt })
+      lectures.push({
+        row: r.row,
+        startsAt,
+        sheikhSlug: rowSheikhSlug,
+        scopeFrom: rowScopeFrom,
+        scopeTo: rowScopeTo,
+      })
     }
 
     if (!headOk || !lecturesOk || lectures.length === 0) continue
@@ -255,7 +285,6 @@ export function parseImportRows(rows: ImportRow[]): {
       slug,
       title: title!,
       book: book!,
-      sheikhSlug: sheikhSlug!,
       type: type!,
       place: place!,
       mapUrl: mapUrl!,

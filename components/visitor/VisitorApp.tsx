@@ -39,6 +39,8 @@ export function VisitorApp({
   publicLink,
   sheikhMode = 'filter',
   showSeriesColumns = true,
+  showSheikhColumn,
+  showScopeColumns = false,
   header,
 }: {
   hero: HeroVM | null
@@ -62,6 +64,10 @@ export function VisitorApp({
   /** ما تفعله قائمة المشايخ: تضبط تصفية في `/`، أو تنتقل إلى صفحة الشيخ في الفرعية */
   sheikhMode?: 'filter' | 'navigate'
   showSeriesColumns?: boolean
+  /** افتراضياً يتبع showSeriesColumns — صفحة السلسلة وحدها تفصلهما */
+  showSheikhColumn?: boolean
+  /** عمودا «من»/«إلى» — صفحة السلسلة وحدها تُمرّره، وفقط حين تستعملهما */
+  showScopeColumns?: boolean
   /** رأس خاص بالصفحة (رأس السلسلة مثلاً) يُدرَج فوق الجدول */
   header?: React.ReactNode
 }) {
@@ -163,6 +169,8 @@ export function VisitorApp({
             rows={tableRows}
             emptyKind={kind}
             showSeriesColumns={showSeriesColumns}
+            showSheikhColumn={showSheikhColumn}
+            showScopeColumns={showScopeColumns}
           />
           <MobileCards rows={tableRows} emptyKind={kind} onOpen={openLecture} />
         </section>

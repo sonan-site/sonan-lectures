@@ -348,3 +348,111 @@ grant execute on function admin_delete_lecture(uuid) to service_role;
 -- تنفيذ هذا القسم فعلياً في docs/migration-002-template-and-archive.sql
 -- و docs/migration-002b-missing-pieces.sql — هذا القسم مرجع مطابق للحالة
 -- النهائية، لا يُشغَّل بذاته.
+
+
+-- ------------------------------------------------------------
+-- تعديل لاحق: الشيخ يتناوب داخل اللقاء + حقلا المقدار (هجرة ٠٠٣، ADR-0005)
+--
+-- الشيخ صار حقلاً موروثاً قابلاً للتجاوز على مستوى اللقاء أيضاً — النمط
+-- نفسه المطبَّق على duration_min/type/place/join_url، ممدوداً إلى ما
+-- كان يُظنّ ثابتاً في ADR-0001. سلسلة كلّ لقاءٍ فيها بشيخ مختلف (تناوب
+-- كامل) لا شيخ افتراضي لها إطلاقاً — series.sheikh_name/slug صارا
+-- اختياريَين لهذا وحده، لا لغرض آخر.
+--
+-- والمقدار (أيّ جزء من الكتاب يغطّيه هذا اللقاء تحديداً) حقلان نصّيان
+-- على اللقاء وحده، بلا نظير على السلسلة وبلا وراثة إطلاقاً.
+-- ------------------------------------------------------------
+
+-- عمودا المقدار — بلا وراثة ولا قيد
+alter table lectures add column scope_from text, add column scope_to text;
+
+-- الشيخ يصير اختيارياً على مستوى السلسلة أيضاً (تجويف قيد بحت، آمن)
+alter table series alter column sheikh_name drop not null, alter column sheikh_slug drop not null;
+
+-- الشيخ المُتجاوِز على اللقاء — يطابق نمط duration_min/type/place/join_url
+alter table lectures
+  add column sheikh_id uuid constraint lectures_sheikh_id_fkey
+      references sheikhs (id) on delete set null,
+  add column sheikh_name text,
+  add column sheikh_slug text,
+  add constraint lectures_sheikh_slug_format
+      check (sheikh_slug is null or sheikh_slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$');
+
+create index lectures_sheikh_idx on lectures (sheikh_id);
+
+-- جسر التوافق + الحارس — دالّة واحدة لا دالّتان: ترتيب تنفيذ مُشغِّلين
+-- منفصلين على الحدث نفسه أبجديّ في PostgreSQL لا منطقي، وفصلهما كان
+-- سيُخاطر برفض إدخال صالح.
+create or replace function lectures_sheikh_guard() returns trigger
+language plpgsql as $$
+declare v_series_sheikh_name text;
+begin
+  if new.sheikh_id is not null and (new.sheikh_name is null or new.sheikh_slug is null) then
+    select sh.name, sh.slug into new.sheikh_name, new.sheikh_slug from sheikhs sh where sh.id = new.sheikh_id;
+  end if;
+  if new.sheikh_name is null then
+    select s.sheikh_name into v_series_sheikh_name from series s where s.id = new.series_id;
+    if v_series_sheikh_name is null then
+      raise exception 'لا شيخ فعّال لهذا اللقاء — لا لقطة عليه ولا شيخ افتراضي لسلسلته.' using errcode = '23514';
+    end if;
+  end if;
+  return new;
+end $$;
+
+create trigger lectures_sheikh_guard_trg before insert or update on lectures
+  for each row execute function lectures_sheikh_guard();
+
+-- الحارس المعاكس على السلسلة: يمنع تفريغ شيخها الافتراضي بصمت وهي تحمل
+-- لقاءات تعتمد على وراثته — لا مسار كود حالي يُشغّله، احتياط مجاني
+create or replace function series_sheikh_guard() returns trigger
+language plpgsql as $$
+declare v_orphans int;
+begin
+  if new.sheikh_name is null and old.sheikh_name is not null then
+    select count(*) into v_orphans from lectures l where l.series_id = new.id and l.sheikh_name is null;
+    if v_orphans > 0 then
+      raise exception '% لقاءً بلا لقطة شيخ خاصة به يعتمد على وراثة سلسلته — عيّن شيخاً مباشراً لكل واحد قبل تفريغ شيخ السلسلة.', v_orphans
+        using errcode = '23514';
+    end if;
+  end if;
+  return new;
+end $$;
+
+create trigger series_sheikh_guard_trg before update on series
+  for each row execute function series_sheikh_guard();
+
+-- العرضان يُعادان بناؤهما: الشيخ بالتغليب (لقاء فسلسلة)، والمقدار يمرّ مباشرة
+create or replace view v_lectures_admin as
+select
+  l.id, l.series_id,
+  coalesce(l.sheikh_id, s.sheikh_id)     as sheikh_id,
+  coalesce(l.sheikh_name, s.sheikh_name) as sheikh_name,
+  coalesce(l.sheikh_slug, s.sheikh_slug) as sheikh_slug,
+  s.title, s.book, l.ord,
+  (select count(*) from lectures x where x.series_id = s.id and x.archived_at is null) as series_count,
+  l.starts_at,
+  coalesce(l.duration_min, s.duration_min) as duration_min,
+  l.starts_at + make_interval(mins => coalesce(l.duration_min, s.duration_min)) as ends_at,
+  coalesce(l.type, s.type) as type,
+  coalesce(l.place, s.place, cfg.hq_place) as place,
+  coalesce(l.map_url, s.map_url, cfg.hq_map_url) as map_url,
+  coalesce(l.join_url, s.join_url) as join_url,
+  l.is_cancelled,
+  case when l.is_cancelled then 'cancelled'
+       when now() < l.starts_at then 'upcoming'
+       when now() < l.starts_at + make_interval(mins => coalesce(l.duration_min, s.duration_min)) then 'live'
+       else 'done' end as status,
+  l.archived_at as lecture_archived_at, s.archived_at as series_archived_at,
+  l.scope_from, l.scope_to
+from lectures l join series s on s.id = l.series_id cross join settings cfg;
+
+grant select on v_lectures_admin to anon, authenticated;
+
+create or replace view v_lectures as
+select id, series_id, sheikh_id, sheikh_name, sheikh_slug, title, book, ord, series_count,
+       starts_at, duration_min, ends_at, type, place, map_url, join_url, is_cancelled, status,
+       scope_from, scope_to
+from v_lectures_admin where lecture_archived_at is null and series_archived_at is null;
+
+-- تنفيذ هذا القسم فعلياً في docs/migration-003-lecture-sheikh-override.sql
+-- — هذا القسم مرجع مطابق للحالة النهائية، لا يُشغَّل بذاته.

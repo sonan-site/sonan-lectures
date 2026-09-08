@@ -184,7 +184,7 @@ export function SheikhsTab({
         onConfirm={async () => {
           if (!toDelete) return
           const data = await callOrThrow(
-            `/api/admin/sheikhs/${toDelete.id}?expect=${toDelete.seriesCount}`,
+            `/api/admin/sheikhs/${toDelete.id}?expect=${toDelete.seriesCount}&expectLectures=${toDelete.overriddenLectureCount}`,
             { method: 'DELETE' }
           )
           setToDelete(null)
@@ -194,14 +194,24 @@ export function SheikhsTab({
           toDelete ? (
             <>
               حذف قالب <b>«{toDelete.name}»</b> من قائمة المشايخ نهائياً.
-              {toDelete.seriesCount > 0 ? (
+              {toDelete.seriesCount > 0 || toDelete.overriddenLectureCount > 0 ? (
                 <>
                   {' '}
-                  له <b>{toDelete.seriesCountAr}</b> سلسلة — تبقى كاملةً باسمه ورابطه، ويبقى رابطه
-                  العام <code dir="ltr">/sheikh/{toDelete.slug}</code> عاملاً.
+                  {toDelete.seriesCount > 0 ? (
+                    <>
+                      له <b>{toDelete.seriesCountAr}</b> سلسلة —{' '}
+                    </>
+                  ) : null}
+                  {toDelete.overriddenLectureCount > 0 ? (
+                    <>
+                      و<b>{toDelete.overriddenLectureCountAr}</b> لقاءً يتجاوز عليه مباشرة —{' '}
+                    </>
+                  ) : null}
+                  تبقى كاملةً باسمه ورابطه، ويبقى رابطه العام{' '}
+                  <code dir="ltr">/sheikh/{toDelete.slug}</code> عاملاً.
                 </>
               ) : (
-                <> لا سلاسل له، فلا يتأثّر شيء آخر.</>
+                <> لا سلاسل ولا لقاءات متجاوِزة له، فلا يتأثّر شيء آخر.</>
               )}
               <br />
               <br />

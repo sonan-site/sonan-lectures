@@ -45,6 +45,21 @@ export interface LectureVM {
   book: string | null
   sheikhName: string
   sheikhSlug: string
+  /**
+   * مقدار هذا اللقاء تحديداً — بلا وراثة، مستقلّان (هجرة ٠٠٣).
+   * خامان لصفحة السلسلة (عمودان مستقلّان بلا تنسيق) — انظر `scopeLine`
+   * للسطر الجاهز المُنسَّق المُستعمَل في بقية المواضع.
+   */
+  scopeFrom: string | null
+  scopeTo: string | null
+  /**
+   * السطر الثاني الجاهز تحت العنوان — مُنسَّق هنا خادمياً (القاعدة الحاكمة
+   * أعلى الملف): "المقدار: ..." إن وُجد أحد الحقلين أو كلاهما، وإلا اسم
+   * الكتاب بلا تسمية، وإلا `null` فيختفي السطر. تستعمله `LectureTable`
+   * وHero ونافذة التفاصيل حصراً — لا صفحة السلسلة (`scopeFrom`/`scopeTo`
+   * الخامان أعلاه لعمودَيها المستقلّين).
+   */
+  scopeLine: string | null
 
   /** الترتيب: رقم مجرّد يبدأ من ١، بلا «من ١٢»، ويظهر في اللقاء المنفرد */
   ordAr: string
@@ -80,6 +95,19 @@ export interface LectureVM {
   cancelledChip: string
 }
 
+/**
+ * السطر الثاني تحت العنوان في الجدول العام وHero ونافذة التفاصيل —
+ * مُنسَّق خادمياً واحدة، لا في كل مكوّن على حدة (ADR-0005، استجواب العرض).
+ */
+function formatScopeLine(l: Pick<LectureView, 'scope_from' | 'scope_to' | 'book'>): string | null {
+  const from = l.scope_from?.trim() || null
+  const to = l.scope_to?.trim() || null
+  if (from && to) return `المقدار: من ${from} — إلى ${to}`
+  if (from) return `المقدار: ${from}`
+  if (to) return `المقدار: ${to}`
+  return l.book
+}
+
 export function toLectureVM(
   l: LectureView,
   seriesSlugs: Map<string, { slug: string; title: string }>
@@ -94,6 +122,9 @@ export function toLectureVM(
     book: l.book,
     sheikhName: l.sheikh_name,
     sheikhSlug: l.sheikh_slug,
+    scopeFrom: l.scope_from,
+    scopeTo: l.scope_to,
+    scopeLine: formatScopeLine(l),
 
     ordAr: arNum(l.ord),
 
@@ -169,6 +200,7 @@ export function buildMonthVM(anchor: Date | number): MonthVM {
 export interface HeroVM {
   title: string
   book: string | null
+  scopeLine: string | null
   sheikhName: string
   weekdayName: string
   hijri: string
@@ -181,6 +213,7 @@ export function toHeroVM(vm: LectureVM): HeroVM {
   return {
     title: vm.title,
     book: vm.book,
+    scopeLine: vm.scopeLine,
     sheikhName: vm.sheikhName,
     weekdayName: vm.weekdayName,
     hijri: vm.hijri,
