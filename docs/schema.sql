@@ -469,4 +469,36 @@ alter table settings add constraint settings_logo_scale_range
 -- على الخانة أصلاً).
 
 -- تنفيذ هذا القسم فعلياً في docs/migration-004-logo-scale.sql
+
+
+-- ------------------------------------------------------------
+-- تعديل لاحق: تعديل اسم الشيخ ورابطه (هجرة ٠٠٥)
+-- ------------------------------------------------------------
+-- دالّة واحدة، بنمط admin_delete_lecture: تحدّث القالب دائماً، وتحدّث
+-- لقطتَي السلسلة واللقاء معاً — أو لا شيء منهما — حسب p_apply_existing،
+-- ذرّياً. لا عمود جديد؛ الأعمدة كلها من هجرتَي ٠٠٢ و٠٠٣.
+create or replace function admin_edit_sheikh(
+  p_sheikh_id uuid,
+  p_name text,
+  p_slug text,
+  p_apply_existing boolean
+) returns void
+language plpgsql as $$
+begin
+  update sheikhs set name = p_name, slug = p_slug where id = p_sheikh_id;
+
+  if not found then
+    raise exception 'sheikh_not_found' using errcode = 'P0002';
+  end if;
+
+  if p_apply_existing then
+    update series   set sheikh_name = p_name, sheikh_slug = p_slug where sheikh_id = p_sheikh_id;
+    update lectures set sheikh_name = p_name, sheikh_slug = p_slug where sheikh_id = p_sheikh_id;
+  end if;
+end $$;
+
+revoke all on function admin_edit_sheikh(uuid, text, text, boolean) from public, anon, authenticated;
+grant execute on function admin_edit_sheikh(uuid, text, text, boolean) to service_role;
+
+-- تنفيذ هذا القسم فعلياً في docs/migration-005-edit-sheikh.sql
 -- — هذا القسم مرجع مطابق للحالة النهائية، لا يُشغَّل بذاته.

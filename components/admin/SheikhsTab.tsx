@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import type { AdminSheikhVM } from '@/lib/admin-queries'
 import { ConfirmDialog, callOrThrow } from './ConfirmDialog'
-import { DeleteIcon, EyeIcon, EyeOffIcon } from './ActionIcons'
+import { DeleteIcon, EditIcon, EyeIcon, EyeOffIcon } from './ActionIcons'
 
 /**
  * تبويب المشايخ — منقول من `vShk()` في النموذج المعتمد.
@@ -25,10 +25,12 @@ export function SheikhsTab({
   sheikhs,
   onDone,
   onNewSheikh,
+  onEdit,
 }: {
   sheikhs: AdminSheikhVM[]
   onDone: (message: string) => void
   onNewSheikh: () => void
+  onEdit: (s: AdminSheikhVM) => void
 }) {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -63,6 +65,15 @@ export function SheikhsTab({
   function Actions({ s }: { s: AdminSheikhVM }) {
     return (
       <>
+        <button
+          className="btn g icon"
+          disabled={busyId === s.id}
+          title="تعديل"
+          aria-label="تعديل"
+          onClick={() => onEdit(s)}
+        >
+          <EditIcon />
+        </button>
         <button
           className="btn g icon"
           disabled={busyId === s.id}

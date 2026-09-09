@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/server/supabase-admin'
 import { fail, requireAdmin } from '@/lib/server/admin-guard'
+import { ValidationError, requiredSlug, requiredText } from '@/lib/server/validate'
 
 /**
- * إخفاء الشيخ وتنشيطه وحذفه من قائمة القوالب.
+ * إخفاء الشيخ وتنشيطه وتعديل اسمه ورابطه وحذفه من قائمة القوالب.
  *
  * **الإخفاء** (`is_active = false`) يخرجه من اختيار السلسلة ومن تصفية
  * الزائر، وتبقى لقاءاته ظاهرة في «السابقة» — القاعدة ٦.٦ كما هي.
@@ -16,6 +17,13 @@ import { fail, requireAdmin } from '@/lib/server/admin-guard'
  *
  * فالجدول صار ما وصفه صاحب المشروع: **قائمة قوالب**، حذف القالب منها
  * لا يمسّ ما بُني به.
+ *
+ * **والتعديل** (هجرة ٠٠٥) يخيّر المشرف صراحة بين تطبيق الاسم والرابط
+ * الجديدين على سلاسل هذا الشيخ ولقاءاته المتجاوِزة **القائمة** أيضاً
+ * (`apply_existing: true`)، أو الإبقاء عليها بالقديم (السلوك الموثَّق
+ * أصلاً: لا يسري رجعياً). تعديل الرابط بلا هذا الخيار كان سيُنتج صفحتين
+ * عامّتين لشخص واحد — القديمة والجديدة — فالخيار يُغلق ذلك تماماً حين
+ * يُختار.
  */
 
 export const dynamic = 'force-dynamic'
@@ -37,23 +45,56 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return fail('طلب غير صالح.')
   }
 
-  if (typeof body.is_active !== 'boolean') {
-    return fail('القيمة المطلوبة: نشط أو غير نشط.')
+  if (typeof body.is_active === 'boolean') {
+    const { data, error } = await supabaseAdmin
+      .from('sheikhs')
+      .update({ is_active: body.is_active })
+      .eq('id', id)
+      .select('id')
+      .maybeSingle()
+
+    if (error) return fail('تعذّر حفظ التغيير. حاول مرة أخرى.', 503)
+    if (!data) return fail('لا يوجد شيخ بهذا المعرّف.', 404)
+
+    return NextResponse.json({
+      ok: true,
+      message: body.is_active ? 'صار نشطاً' : 'أُخفي — ولقاءاته السابقة باقية',
+    })
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('sheikhs')
-    .update({ is_active: body.is_active })
-    .eq('id', id)
-    .select('id')
-    .maybeSingle()
+  let name: string
+  let slug: string
+  try {
+    name = requiredText(body.name, 'الاسم', 120)
+    slug = requiredSlug(body.slug, 'رابط صفحته')
+  } catch (e) {
+    if (e instanceof ValidationError) return fail(e.message, 422)
+    return fail('تعذّر قراءة البيانات المُرسلة.')
+  }
+  const applyExisting = body.apply_existing === true
 
-  if (error) return fail('تعذّر حفظ التغيير. حاول مرة أخرى.', 503)
-  if (!data) return fail('لا يوجد شيخ بهذا المعرّف.', 404)
+  const { error } = await supabaseAdmin.rpc('admin_edit_sheikh', {
+    p_sheikh_id: id,
+    p_name: name,
+    p_slug: slug,
+    p_apply_existing: applyExisting,
+  })
+
+  if (error) {
+    const msg = error.message ?? ''
+    if (msg.includes('sheikh_not_found')) return fail('لا يوجد شيخ بهذا المعرّف.', 404)
+    if (msg.includes('sheikhs_slug_key') || msg.includes('duplicate key')) {
+      return fail('هذا الرابط مستخدم لشيخ آخر. اختر رابطاً غيره.', 409)
+    }
+    if (msg.includes('sheikhs_slug_format')) {
+      return fail('رابط صفحته: حروف لاتينية صغيرة وأرقام وشُرَط فقط.', 422)
+    }
+    return fail('تعذّر حفظ التعديل. حاول مرة أخرى.', 503)
+  }
 
   return NextResponse.json({
     ok: true,
-    message: body.is_active ? 'صار نشطاً' : 'أُخفي — ولقاءاته السابقة باقية',
+    message: applyExisting ? 'حُفظ التعديل — وطُبِّق على سلاسله ولقاءاته القائمة' : 'حُفظ التعديل',
   })
 }
 

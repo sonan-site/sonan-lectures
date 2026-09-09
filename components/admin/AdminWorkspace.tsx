@@ -12,6 +12,7 @@ import { EditLectureForm } from './EditLectureForm'
 import { NewSeriesForm } from './NewSeriesForm'
 import { SheikhsTab } from './SheikhsTab'
 import { NewSheikhForm } from './NewSheikhForm'
+import { EditSheikhForm } from './EditSheikhForm'
 import { ImportSeriesForm } from './ImportSeriesForm'
 import { SettingsTab } from './SettingsTab'
 
@@ -30,16 +31,21 @@ export function AdminWorkspace({ data, serverNow }: { data: AdminData; serverNow
   const [editId, setEditId] = useState<string | null>(null)
   const [newSeries, setNewSeries] = useState(false)
   const [newSheikh, setNewSheikh] = useState(false)
+  const [editSheikhId, setEditSheikhId] = useState<string | null>(null)
   const [importOpen, setImportOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
   const editing = editId ? (data.lectures.find((l) => l.id === editId) ?? null) : null
+  const editingSheikh = editSheikhId
+    ? (data.allSheikhs.find((s) => s.id === editSheikhId) ?? null)
+    : null
 
   const done = useCallback(
     (message: string) => {
       setEditId(null)
       setNewSeries(false)
       setNewSheikh(false)
+      setEditSheikhId(null)
       setImportOpen(false)
       setToast(message)
       router.refresh()
@@ -72,6 +78,7 @@ export function AdminWorkspace({ data, serverNow }: { data: AdminData; serverNow
         sheikhs={data.allSheikhs}
         onDone={done}
         onNewSheikh={() => setNewSheikh(true)}
+        onEdit={(s) => setEditSheikhId(s.id)}
       />
     ),
     set: (
@@ -128,6 +135,20 @@ export function AdminWorkspace({ data, serverNow }: { data: AdminData; serverNow
           onCreated={done}
           onCancel={() => setNewSheikh(false)}
         />
+      </AdminDialog>
+
+      <AdminDialog
+        title={editingSheikh ? `تعديل «${editingSheikh.name}»` : ''}
+        open={Boolean(editingSheikh)}
+        onClose={() => setEditSheikhId(null)}
+      >
+        {editingSheikh ? (
+          <EditSheikhForm
+            sheikh={editingSheikh}
+            onSaved={done}
+            onCancel={() => setEditSheikhId(null)}
+          />
+        ) : null}
       </AdminDialog>
 
       <AdminDialog title="سلسلة جديدة" open={newSeries} onClose={() => setNewSeries(false)}>
