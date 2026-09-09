@@ -33,7 +33,7 @@ function wrap(what: string, error: unknown): never {
 export async function getSettings(): Promise<Settings> {
   const { data, error } = await supabasePublic
     .from('settings')
-    .select('hq_place, hq_map_url, logo_url')
+    .select('hq_place, hq_map_url, logo_url, logo_scale')
     .single()
 
   if (error || !data) wrap('إعدادات المنصة', error)

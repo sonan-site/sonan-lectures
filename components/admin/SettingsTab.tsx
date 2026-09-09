@@ -16,12 +16,14 @@ const MAX_BYTES = 2 * 1024 * 1024
 
 export function SettingsTab({
   logoUrl,
+  logoScale,
   hqPlace,
   hqMapUrl,
   defaultDuration,
   onDone,
 }: {
   logoUrl: string | null
+  logoScale: number
   hqPlace: string
   hqMapUrl: string | null
   defaultDuration: number
@@ -32,6 +34,11 @@ export function SettingsTab({
   const [preview, setPreview] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [logoError, setLogoError] = useState<string | null>(null)
+
+  // القيمة المحلّية تتغيّر مع كل تكّة سحب (المعاينة الحيّة)، والحفظ الفعلي
+  // يقع مرّة واحدة عند الإفلات لا مع كل تكّة — انظر saveScale أدناه
+  const [scale, setScale] = useState(logoScale)
+  const [savingScale, setSavingScale] = useState(false)
 
   const [place, setPlace] = useState(hqPlace)
   const [mapUrl, setMapUrl] = useState(hqMapUrl ?? '')
@@ -118,6 +125,34 @@ export function SettingsTab({
     }
   }
 
+  /** يُستدعى عند إفلات الشريط (لا مع كل تكّة سحب) وعند «إعادة الضبط» */
+  async function saveScale(value: number) {
+    if (savingScale) return
+    setSavingScale(true)
+    setLogoError(null)
+    try {
+      const res = await fetch('/api/admin/settings/logo', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ logo_scale: value }),
+      })
+      const data = (await res.json().catch(() => null)) as { error?: string } | null
+      if (!res.ok) {
+        setLogoError(data?.error ?? 'تعذّر حفظ نسبة الحجم.')
+        return
+      }
+    } catch {
+      setLogoError('تعذّر الاتصال بالخادم.')
+    } finally {
+      setSavingScale(false)
+    }
+  }
+
+  function resetScale() {
+    setScale(100)
+    saveScale(100)
+  }
+
   async function saveSettings() {
     if (savingSettings) return
     setSavingSettings(true)
@@ -182,7 +217,7 @@ export function SettingsTab({
             <div className="dprev">
               {shown ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={shown} alt="الشعار" />
+                <img src={shown} alt="الشعار" style={{ transform: `scale(${scale / 100})` }} />
               ) : (
                 <span>لا شعار بعد</span>
               )}
@@ -222,6 +257,33 @@ export function SettingsTab({
           <p className="hint" style={{ marginTop: 12 }}>
             يُرفع إلى مخزن المشروع ويظهر في الترويسة فوراً — بلا إعادة نشر.
           </p>
+
+          {/* نسبة الحجم — الحفظ عند الإفلات لا مع كل تكّة، والمعاينة أعلاه حيّة أثناء السحب */}
+          <div className="f" style={{ marginTop: 16 }}>
+            <label htmlFor="cLS">حجم الشعار</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <input
+                id="cLS"
+                type="range"
+                min={60}
+                max={140}
+                step={5}
+                value={scale}
+                disabled={!logoUrl}
+                onChange={(e) => setScale(Number(e.target.value))}
+                onMouseUp={(e) => saveScale(Number(e.currentTarget.value))}
+                onTouchEnd={(e) => saveScale(Number(e.currentTarget.value))}
+                onKeyUp={(e) => saveScale(Number(e.currentTarget.value))}
+                style={{ flex: 1 }}
+              />
+              <span style={{ fontWeight: 700, minWidth: 44, textAlign: 'center' }}>
+                {arNum(scale)}٪
+              </span>
+              <button type="button" className="btn g sm" disabled={!logoUrl} onClick={resetScale}>
+                إعادة الضبط
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

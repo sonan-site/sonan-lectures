@@ -22,8 +22,11 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   if (!verifySession(jar.get(ADMIN_COOKIE)?.value)) redirect('/admin/login')
 
   let logo: string | null = null
+  let logoScale = 100
   try {
-    logo = (await getSettings()).logo_url
+    const settings = await getSettings()
+    logo = settings.logo_url
+    logoScale = settings.logo_scale
   } catch {
     logo = null
   }
@@ -36,7 +39,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             <div className="logo">
               {logo ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={logo} alt="سنن" />
+                <img src={logo} alt="سنن" style={{ transform: `scale(${logoScale / 100})` }} />
               ) : (
                 <span className="ph" style={{ display: 'grid' }}>
                   الشعار

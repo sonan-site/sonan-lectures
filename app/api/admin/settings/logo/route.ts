@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { randomUUID } from 'node:crypto'
 import { supabaseAdmin } from '@/lib/server/supabase-admin'
 import { fail, requireAdmin, sameOrigin } from '@/lib/server/admin-guard'
+import { ValidationError, requiredLogoScale } from '@/lib/server/validate'
 
 /**
  * رفع شعار الجمعية وإزالته.
@@ -185,4 +186,39 @@ export async function DELETE(request: Request) {
   await removeOld(previous)
 
   return NextResponse.json({ ok: true })
+}
+
+/**
+ * حفظ نسبة حجم الشعار — يُستدعى مرّة واحدة عند إفلات شريط الانزلاق
+ * (`pointerup`)، لا مع كل تكّة سحب. المعاينة الحيّة أثناء السحب حالة
+ * محلّية بحتة في `SettingsTab.tsx`، لا تلمس الشبكة.
+ */
+export async function PATCH(request: Request) {
+  const denied = await requireAdmin()
+  if (denied) return denied
+  if (!sameOrigin(request)) return fail('طلب من مصدر غير موثوق.', 403)
+
+  let body: Record<string, unknown>
+  try {
+    body = (await request.json()) as Record<string, unknown>
+  } catch {
+    return fail('طلب غير صالح.')
+  }
+
+  let logoScale: number
+  try {
+    logoScale = requiredLogoScale(body.logo_scale)
+  } catch (e) {
+    if (e instanceof ValidationError) return fail(e.message, 422)
+    return fail('تعذّر قراءة البيانات المُرسلة.')
+  }
+
+  const { error } = await supabaseAdmin
+    .from('settings')
+    .update({ logo_scale: logoScale, updated_at: new Date().toISOString() })
+    .eq('id', true)
+
+  if (error) return fail('تعذّر حفظ نسبة الحجم. حاول مرة أخرى.', 503)
+
+  return NextResponse.json({ ok: true, logo_scale: logoScale })
 }

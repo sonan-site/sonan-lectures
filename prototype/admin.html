@@ -196,7 +196,7 @@ function ymd(d){return new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-
 function hm(d){return new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:TZ}).format(d)}
 
 /* ============ الحالة (وهمية) ============ */
-const CFG={place:'مقر جمعية سنن',map:'https://maps.google.com/?q=sonan',dur:90,logo:null};
+const CFG={place:'مقر جمعية سنن',map:'https://maps.google.com/?q=sonan',dur:90,logo:null,logoScale:100};
 const TYPE={onsite:['حضوري','on'],remote:['عن بُعد','rem'],hybrid:['حضوري وعن بُعد','mix']};
 let SH=[
  {id:'h1',name:'الشيخ عبدالله المحمد',slug:'abdullah-almohammed',active:true},
@@ -483,7 +483,7 @@ function vSet(){
   <div class="head"><div><h2>الإعدادات</h2><p>قيم تُكتب مرة وتسري على كل اللقاءات</p></div></div>
   <div class="panel"><div class="ph2">شعار الجمعية</div><div class="pb">
     <div class="drop" id="drop">
-      <div class="dprev" id="dprev">${CFG.logo?`<img src="${CFG.logo}" alt="الشعار">`:'<span>لا شعار بعد</span>'}</div>
+      <div class="dprev" id="dprev">${CFG.logo?`<img src="${CFG.logo}" alt="الشعار" style="transform:scale(${CFG.logoScale/100})">`:'<span>لا شعار بعد</span>'}</div>
       <div class="dtxt">
         <b>اسحب ملف الشعار هنا أو اخترْه</b>
         <p class="hint">PNG أو SVG بخلفية شفافة · العرض المناسب ٣٠٠–٦٠٠ بكسل · حتى ٢ ميجابايت</p>
@@ -495,6 +495,13 @@ function vSet(){
       <input type="file" id="file" accept="image/png,image/svg+xml,image/jpeg,image/webp" hidden>
     </div>
     <p class="hint" style="margin-top:12px">يُرفع إلى مخزن المشروع ويظهر في الترويسة فوراً — بلا إعادة نشر.</p>
+    <div class="f" style="margin-top:16px"><label>حجم الشعار</label>
+      <div style="display:flex;align-items:center;gap:12px">
+        <input type="range" id="cLS" min="60" max="140" step="5" value="${CFG.logoScale}" ${CFG.logo?'':'disabled'} style="flex:1">
+        <span id="cLSval" style="font-weight:700;min-width:44px;text-align:center">${CFG.logoScale}٪</span>
+        <button class="btn g sm" id="cLSreset" ${CFG.logo?'':'disabled'}>إعادة الضبط</button>
+      </div>
+    </div>
   </div></div>
   <div class="panel"><div class="ph2">المقر الافتراضي</div><div class="pb">
     <div class="grid2">
@@ -517,6 +524,16 @@ function vSet(){
   document.getElementById('pick').onclick=()=>file.click();
   const rm=document.getElementById('rmlogo');
   if(rm)rm.onclick=()=>{CFG.logo=null;vSet();paintLogo();toast('أُزيل الشعار')};
+  const ls=document.getElementById('cLS');
+  // معاينة حيّة مع كل تكّة سحب — بلا إعادة تصيير كامل (vSet) حتى لا يُقطَع السحب
+  ls.oninput=()=>{
+    document.getElementById('cLSval').textContent=ls.value+'٪';
+    const img=document.querySelector('#dprev img');
+    if(img)img.style.transform=`scale(${ls.value/100})`;
+  };
+  const commitScale=()=>{CFG.logoScale=+ls.value;paintLogo()};
+  ls.onmouseup=commitScale;ls.ontouchend=commitScale;ls.onkeyup=commitScale;
+  document.getElementById('cLSreset').onclick=()=>{CFG.logoScale=100;vSet();paintLogo()};
   function take(f){
     if(!f)return;
     if(!/^image\/(png|svg\+xml|jpeg|webp)$/.test(f.type))return toast('الملف يجب أن يكون صورة PNG أو SVG');
@@ -551,7 +568,7 @@ document.addEventListener('click',e=>{
 });
 function paintLogo(){
   const b=document.querySelector('.logo');
-  b.innerHTML=CFG.logo?`<img src="${CFG.logo}" alt="شعار الجمعية">`
+  b.innerHTML=CFG.logo?`<img src="${CFG.logo}" alt="شعار الجمعية" style="transform:scale(${CFG.logoScale/100})">`
     :`<span class="ph" style="display:grid">الشعار</span>`;
 }
 paintNav();paintLogo();vLec();

@@ -71,6 +71,14 @@ export function optionalDuration(v: unknown, label = 'المدة'): number | nul
   return n
 }
 
+/** نسبة حجم الشعار — بين ٦٠ و١٤٠، مطابقة لقيد settings_logo_scale_range */
+export function requiredLogoScale(v: unknown, label = 'نسبة الحجم'): number {
+  const n = typeof v === 'number' ? v : Number(String(v ?? '').trim())
+  if (!Number.isInteger(n)) bad(`${label}: يجب أن تكون رقماً صحيحاً.`)
+  if (n < 60 || n > 140) bad(`${label}: بين ٦٠ و١٤٠٪.`)
+  return n
+}
+
 export function optionalType(v: unknown, label = 'النوع'): LectureType | null {
   if (v === null || v === undefined || v === '') return null
   if (typeof v !== 'string' || !LECTURE_TYPES.includes(v as LectureType)) {

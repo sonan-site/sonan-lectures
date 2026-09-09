@@ -77,6 +77,7 @@ export function AdminWorkspace({ data, serverNow }: { data: AdminData; serverNow
     set: (
       <SettingsTab
         logoUrl={data.logoUrl}
+        logoScale={data.logoScale}
         hqPlace={data.hqPlace}
         hqMapUrl={data.hqMapUrl}
         defaultDuration={90}

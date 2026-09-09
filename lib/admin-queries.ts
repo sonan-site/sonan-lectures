@@ -189,6 +189,7 @@ export interface AdminData {
   hqPlace: string
   hqMapUrl: string | null
   logoUrl: string | null
+  logoScale: number
 }
 
 export async function getAdminData(): Promise<AdminData> {
@@ -204,7 +205,7 @@ export async function getAdminData(): Promise<AdminData> {
       .order('starts_at', { ascending: true }),
     supabasePublic.from('v_lectures_admin').select('id, status'),
     supabasePublic.from('sheikhs').select('id, name, slug, is_active').order('name'),
-    supabasePublic.from('settings').select('hq_place, hq_map_url, logo_url').single(),
+    supabasePublic.from('settings').select('hq_place, hq_map_url, logo_url, logo_scale').single(),
   ])
 
   if (rawRes.error) wrap('اللقاءات', rawRes.error)
@@ -215,6 +216,7 @@ export async function getAdminData(): Promise<AdminData> {
   const hqPlace = settingsRes.data?.hq_place ?? 'مقر جمعية سنن'
   const hqMapUrl = settingsRes.data?.hq_map_url ?? null
   const logoUrl = settingsRes.data?.logo_url ?? null
+  const logoScale = settingsRes.data?.logo_scale ?? 100
 
   const statusById = new Map<string, LectureStatus>(
     (statusRes.data ?? []).map((r) => [r.id as string, r.status as LectureStatus])
@@ -392,5 +394,6 @@ export async function getAdminData(): Promise<AdminData> {
     hqPlace,
     hqMapUrl,
     logoUrl,
+    logoScale,
   }
 }

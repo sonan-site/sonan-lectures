@@ -24,7 +24,11 @@ export default async function VisitorLayout({ children }: { children: React.Reac
                 // (max-width/max-height/object-fit) تفترض العنصر نفسه،
                 // وغلاف next/image يكسر مقاس ١٥٠×٦٠ المعتمد.
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={settings.logo_url} alt="جمعية سنن التعليمية" />
+                <img
+                  src={settings.logo_url}
+                  alt="جمعية سنن التعليمية"
+                  style={{ transform: `scale(${settings.logo_scale / 100})` }}
+                />
               ) : (
                 <span className="ph" style={{ display: 'grid' }}>
                   مساحة الشعار

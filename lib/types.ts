@@ -90,6 +90,8 @@ export interface Settings {
   hq_place: string
   hq_map_url: string | null
   logo_url: string | null
+  /** نسبة عرض الشعار — ١٠٠ الافتراضي، بين ٦٠ و١٤٠ (هجرة ٠٠٤) */
+  logo_scale: number
 }
 
 /** خيار في قائمة تصفية المشايخ — من لقطات اللقاءات لا من جدول القوالب */

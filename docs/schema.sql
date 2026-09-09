@@ -456,3 +456,17 @@ from v_lectures_admin where lecture_archived_at is null and series_archived_at i
 
 -- تنفيذ هذا القسم فعلياً في docs/migration-003-lecture-sheikh-override.sql
 -- — هذا القسم مرجع مطابق للحالة النهائية، لا يُشغَّل بذاته.
+
+
+-- ------------------------------------------------------------
+-- تعديل لاحق: ضبط حجم شعار الجمعية (هجرة ٠٠٤)
+-- ------------------------------------------------------------
+alter table settings add column logo_scale smallint not null default 100;
+alter table settings add constraint settings_logo_scale_range
+  check (logo_scale between 60 and 140);
+-- ١٠٠ = الحجم الطبيعي. يُضرَب على الشعار بـ`transform: scale()` في
+-- الترويسة والمعاينة، بلا تجاوز حدود خانته (`overflow:hidden` قائم
+-- على الخانة أصلاً).
+
+-- تنفيذ هذا القسم فعلياً في docs/migration-004-logo-scale.sql
+-- — هذا القسم مرجع مطابق للحالة النهائية، لا يُشغَّل بذاته.
