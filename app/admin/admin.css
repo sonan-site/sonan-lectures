@@ -72,7 +72,11 @@ main{padding:24px 0 60px}
 .btn.icon{padding:7px;width:32px;height:32px;justify-content:center}
 .btn.icon svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 
-.actions{display:flex;gap:6px;align-items:center}
+/* قاعدة ثابتة: صفّ أزرار الإجراءات يتوسّط عمود «إجراءات» دائماً — بلا
+   justify-content هنا يلتصق بجهة البداية (يمين الجدول في RTL) بدل
+   التوسّط تحت رأس العمود. أي عمود إجراءات جديد يُستعمل معه هذا الصنف
+   نفسه يرث التوسيط تلقائياً؛ لا يُحذف هذا السطر ولا يُستبدَل بمحاذاة أخرى. */
+.actions{display:flex;gap:6px;align-items:center;justify-content:center}
 
 .panel{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
 
