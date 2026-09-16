@@ -1,6 +1,6 @@
 'use client'
 
-import { arNum, arPad2, countdown, dayWord, hourWord, minutesSince } from '@/lib/datetime'
+import { arNum, countdown, dayWord, hourWord, minutesSince } from '@/lib/datetime'
 import type { HeroVM } from '@/lib/view-model'
 import { useNow } from './NowProvider'
 
@@ -59,11 +59,11 @@ export function Hero({ vm }: { vm: HeroVM | null }) {
               </div>
             ) : null}
             <div className="unit">
-              <b>{arPad2(c.hours)}</b>
+              <b>{arNum(c.hours)}</b>
               <span>{hourWord(c.hours)}</span>
             </div>
             <div className="unit">
-              <b>{arPad2(c.minutes)}</b>
+              <b>{arNum(c.minutes)}</b>
               <span>دقيقة</span>
             </div>
           </div>

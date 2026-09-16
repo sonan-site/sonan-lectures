@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { arPad2, countdown, pluralDays, pluralHours } from '@/lib/datetime'
+import { arNum, countdown, pluralDays, pluralHours } from '@/lib/datetime'
 import type { LectureVM } from '@/lib/view-model'
 import { useNow } from './NowProvider'
 import { Destination, TypeChip } from './cells'
@@ -93,7 +93,7 @@ function LectureDetail({ vm }: { vm: LectureVM }) {
             <b>
               {c.days >= 1
                 ? pluralDays(c.days)
-                : `${pluralHours(c.hours)} و${arPad2(c.minutes)} دقيقة`}
+                : `${pluralHours(c.hours)} و${arNum(c.minutes)} دقيقة`}
             </b>
           </div>
         ) : null}
