@@ -1,6 +1,6 @@
 'use client'
 
-import { arNum, arPad2, countdown } from '@/lib/datetime'
+import { arNum, arPad2, countdown, dayWord } from '@/lib/datetime'
 import type { LectureVM } from '@/lib/view-model'
 import { useNow } from './NowProvider'
 
@@ -18,7 +18,7 @@ export function Countdown({ startsAtMs }: { startsAtMs: number }) {
     return (
       <span className="cd">
         <b>{arNum(c.days)}</b>
-        <u>يوم</u>
+        <u>{dayWord(c.days)}</u>
       </span>
     )
   }

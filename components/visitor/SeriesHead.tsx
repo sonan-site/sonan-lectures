@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { arNum, arPad2, countdown } from '@/lib/datetime'
+import { arNum, arPad2, countdown, pluralDays } from '@/lib/datetime'
 import type { LectureVM } from '@/lib/view-model'
 import { useNow } from './NowProvider'
 
@@ -58,7 +58,7 @@ export function SeriesHead({
     nextIn = (
       <div className="nextin">
         اللقاء القادم بعد{' '}
-        <b>{c.days >= 1 ? `${arNum(c.days)} يوم` : `${arPad2(c.hours)}:${arPad2(c.minutes)} ساعة`}</b>
+        <b>{c.days >= 1 ? pluralDays(c.days) : `${arPad2(c.hours)}:${arPad2(c.minutes)} ساعة`}</b>
       </div>
     )
   } else {

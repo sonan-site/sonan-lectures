@@ -282,3 +282,47 @@ export function pluralLectures(n: number): string {
   if (n >= 3 && n <= 10) return `${arNum(n)} لقاءات`
   return `${arNum(n)} لقاءً`
 }
+
+interface PluralForms {
+  /** ١ */
+  one: string
+  /** ٢ — يحمل معنى الاثنين في صيغته، لا رقماً يسبقه */
+  two: string
+  /** ٣-١٠ */
+  few: string
+  /** ١١ فأكثر — تمييز مفرد منصوب */
+  many: string
+}
+
+/** الصيغة المطابقة للعدد وحدها — يُلصَق رقمها منفصلاً حيث يُعرض في صندوقه الخاص */
+function pluralWord(n: number, f: PluralForms): string {
+  if (n === 1) return f.one
+  if (n === 2) return f.two
+  if (n >= 3 && n <= 10) return f.few
+  return f.many
+}
+
+/** «أيام» بعد ٣-١٠ جمعٌ مجرور بالإضافة (تنوين الكسر) — لا تمييز منصوب؛ ذاك خاصّ بـ١١ فما فوق وحدها */
+const DAY_FORMS: PluralForms = { one: 'يوم', two: 'يومان', few: 'أيامٍ', many: 'يوماً' }
+/** جمع «ساعة» جمعُ مؤنث سالم — منصوبه بالكسرة نيابةً عن الفتحة، لا بألف وتنوين فتح */
+const HOUR_FORMS: PluralForms = { one: 'ساعة', two: 'ساعتان', few: 'ساعاتٍ', many: 'ساعةً' }
+
+/** «يوم» · «يومان» · «أيامٍ» · «يوماً» — للصقّ بجانب رقم مُصيَّر مسبقاً في صندوقه */
+export const dayWord = (n: number): string => pluralWord(n, DAY_FORMS)
+
+/** «ساعة» · «ساعتان» · «ساعاتٍ» · «ساعةً» — للصقّ بجانب رقم مُصيَّر مسبقاً في صندوقه */
+export const hourWord = (n: number): string => pluralWord(n, HOUR_FORMS)
+
+/** تمييز المفرد والمثنى والجمع — «يوم واحد» و«يومان» و«٣ أيامٍ» و«١١ يوماً» */
+export function pluralDays(n: number): string {
+  if (n === 1) return 'يوم واحد'
+  if (n === 2) return 'يومان'
+  return `${arNum(n)} ${dayWord(n)}`
+}
+
+/** تمييز المفرد والمثنى والجمع — «ساعة واحدة» و«ساعتان» و«٣ ساعاتٍ» و«١١ ساعةً» */
+export function pluralHours(n: number): string {
+  if (n === 1) return 'ساعة واحدة'
+  if (n === 2) return 'ساعتان'
+  return `${arNum(n)} ${hourWord(n)}`
+}
