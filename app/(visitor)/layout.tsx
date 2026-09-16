@@ -20,14 +20,20 @@ export default async function VisitorLayout({ children }: { children: React.Reac
           <div className="brand">
             <div className="logo">
               {settings.logo_url ? (
-                // عنصر <img> عادي عمداً: أصناف الورقة
-                // (max-width/max-height/object-fit) تفترض العنصر نفسه،
-                // وغلاف next/image يكسر مقاس ١٥٠×٦٠ المعتمد.
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={settings.logo_url}
-                  alt="جمعية سنن التعليمية"
-                  style={{ transform: `scale(${settings.logo_scale / 100})` }}
+                // خلفية CSS لا عنصر <img>: object-fit:contain مع
+                // width/height:100% لا يتقيّد بارتفاع الصندوق داخل هذا
+                // التخطيط مهما حاولت (max-width/max-height، أو صريحة،
+                // أو position:absolute — جُرِّبت الثلاث) فيرتفع الشعار
+                // بنسبة عرضه دائماً ويُقتصّ. background-size:contain
+                // يتقيّد بصندوقه بشكل صحيح دونها.
+                <div
+                  className="logoimg"
+                  role="img"
+                  aria-label="جمعية سنن التعليمية"
+                  style={{
+                    backgroundImage: `url(${settings.logo_url})`,
+                    transform: `scale(${settings.logo_scale / 100})`,
+                  }}
                 />
               ) : (
                 <span className="ph" style={{ display: 'grid' }}>

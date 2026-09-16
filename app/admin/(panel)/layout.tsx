@@ -38,8 +38,15 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           <div className="brand">
             <div className="logo">
               {logo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={logo} alt="سنن" style={{ transform: `scale(${logoScale / 100})` }} />
+                <div
+                  className="logoimg"
+                  role="img"
+                  aria-label="سنن"
+                  style={{
+                    backgroundImage: `url(${logo})`,
+                    transform: `scale(${logoScale / 100})`,
+                  }}
+                />
               ) : (
                 <span className="ph" style={{ display: 'grid' }}>
                   الشعار

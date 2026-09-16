@@ -20,7 +20,7 @@
 
 .logo{width:112px;height:46px;border-radius:9px;background:var(--beige);display:grid;place-items:center;overflow:hidden;padding:6px;flex:0 0 auto}
 
-.logo img{width:100%;height:100%;object-fit:contain}
+.logo .logoimg{width:100%;height:100%;background-size:contain;background-position:center;background-repeat:no-repeat}
 
 .logo .ph{display:none;font-size:9.5px;font-weight:700;color:#B0A69B;text-align:center;line-height:1.5;border:1px dashed #C9BFB4;border-radius:6px;width:100%;height:100%;place-items:center}
 
@@ -268,7 +268,7 @@ tbody tr.off .tt{text-decoration:line-through}
 
 .dprev{width:170px;height:76px;flex:0 0 auto;background:var(--petrol);border-radius:10px;display:grid;place-items:center;overflow:hidden;padding:9px}
 
-.dprev img{width:100%;height:100%;object-fit:contain}
+.dprev .logoimg{width:100%;height:100%;background-size:contain;background-position:center;background-repeat:no-repeat}
 
 .dprev span{font-size:12px;color:#8FA3A9;font-weight:600}
 

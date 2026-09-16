@@ -216,8 +216,15 @@ export function SettingsTab({
           >
             <div className="dprev">
               {shown ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={shown} alt="الشعار" style={{ transform: `scale(${scale / 100})` }} />
+                <div
+                  className="logoimg"
+                  role="img"
+                  aria-label="الشعار"
+                  style={{
+                    backgroundImage: `url(${shown})`,
+                    transform: `scale(${scale / 100})`,
+                  }}
+                />
               ) : (
                 <span>لا شعار بعد</span>
               )}
