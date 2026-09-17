@@ -13,8 +13,8 @@
 .top .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px}
 .brand{display:flex;align-items:center;gap:16px}
 .logo{
-  width:150px;height:60px;flex:0 0 auto;border-radius:10px;background:var(--beige);
-  display:grid;place-items:center;overflow:hidden;padding:7px;
+  width:150px;height:60px;flex:0 0 auto;
+  display:grid;place-items:center;overflow:hidden;
 }
 .logo .logoimg{width:100%;height:100%;background-size:contain;background-position:center;background-repeat:no-repeat}
 .logo .ph{display:none;font-size:10.5px;font-weight:700;color:#B0A69B;text-align:center;line-height:1.5;border:1px dashed #C9BFB4;border-radius:6px;width:100%;height:100%;place-items:center;padding:4px}
@@ -181,7 +181,7 @@ dialog::backdrop{background:rgba(28,44,50,.6)}
   .wrap{padding:0 14px}
   .top .wrap{flex-direction:column;gap:11px;padding:14px}
   .brand{width:100%;justify-content:center;gap:13px}
-  .logo{width:112px;height:46px;padding:6px}
+  .logo{width:112px;height:46px}
   .brand .sep{height:36px}
   .brand b{font-size:15px}
   .brand span{font-size:11.5px}
